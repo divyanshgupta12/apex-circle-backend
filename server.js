@@ -92,8 +92,8 @@ function sendJson(res, statusCode, data) {
     res.writeHead(statusCode, {
         'Content-Type': 'application/json; charset=utf-8',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, x-api-key, Access-Control-Request-Private-Network',
+        'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, Access-Control-Request-Private-Network',
         'Access-Control-Allow-Private-Network': 'true'
     });
     res.end(payload);
@@ -399,8 +399,8 @@ http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') {
         res.writeHead(204, {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, x-api-key, Access-Control-Request-Private-Network',
+            'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, Access-Control-Request-Private-Network',
             'Access-Control-Allow-Private-Network': 'true'
         });
         return res.end();
@@ -481,6 +481,57 @@ http.createServer(async (req, res) => {
         }
     }
 
+    if (req.method === 'DELETE' && u.pathname === '/api/team_tasks') {
+        try {
+            const id = u.searchParams.get('id');
+            if (!id) {
+                return sendJson(res, 400, { ok: false, error: 'Missing query: provide id' });
+            }
+
+            if (NEON_API_KEY) {
+                const endpoint = `/team_tasks?id=eq.${encodeURIComponent(id)}`;
+                const del = await neonRequest('DELETE', endpoint);
+                return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
+            }
+
+            let list = [];
+            if (fs.existsSync(TASKS_FILE)) {
+                const raw = fs.readFileSync(TASKS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            list = list.filter(t => String(t && t.id) !== String(id));
+            fs.writeFileSync(TASKS_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (req.method === 'POST' && u.pathname === '/api/team_tasks/delete') {
+        try {
+            const body = await readJson(req);
+            const id = String(body && body.id ? body.id : '').trim();
+            if (!id) return sendJson(res, 400, { ok: false, error: 'Missing id' });
+            if (NEON_API_KEY) {
+                const endpoint = `/team_tasks?id=eq.${encodeURIComponent(id)}`;
+                const del = await neonRequest('DELETE', endpoint);
+                return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
+            }
+            let list = [];
+            if (fs.existsSync(TASKS_FILE)) {
+                const raw = fs.readFileSync(TASKS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            list = list.filter(t => String(t && t.id) !== String(id));
+            fs.writeFileSync(TASKS_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
     if (req.method === 'GET' && u.pathname === '/api/team_rewards') {
         try {
             if (NEON_API_KEY) {
@@ -533,6 +584,42 @@ http.createServer(async (req, res) => {
             else list[idx] = payload;
             fs.writeFileSync(REWARDS_FILE, JSON.stringify(list));
             return sendJson(res, 200, { ok: true, reward: payload });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (req.method === 'DELETE' && u.pathname === '/api/team_rewards') {
+        try {
+            const all = u.searchParams.get('all');
+            const taskId = u.searchParams.get('taskId');
+            if (NEON_API_KEY) {
+                let endpoint = '';
+                if (all === 'true') {
+                    endpoint = '/team_rewards?id=not.is.null';
+                } else if (taskId) {
+                    endpoint = `/team_rewards?taskId=eq.${encodeURIComponent(taskId)}`;
+                } else {
+                    return sendJson(res, 400, { ok: false, error: 'Missing query: provide all=true or taskId' });
+                }
+                const del = await neonRequest('DELETE', endpoint);
+                return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
+            }
+            let list = [];
+            if (fs.existsSync(REWARDS_FILE)) {
+                const raw = fs.readFileSync(REWARDS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            if (all === 'true') {
+                list = [];
+            } else if (taskId) {
+                list = list.filter(r => String(r && r.taskId) !== String(taskId));
+            } else {
+                return sendJson(res, 400, { ok: false, error: 'Missing query: provide all=true or taskId' });
+            }
+            fs.writeFileSync(REWARDS_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true });
         } catch (e) {
             return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
         }
