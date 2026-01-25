@@ -4,9 +4,18 @@ const fs = require('fs');
 const path = require('path');
 const { URLSearchParams } = require('url');
 
-const PORT = 8000;
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+const PORT = 8002;
 const TASKS_FILE = path.join(__dirname, 'team_tasks.json');
 const REWARDS_FILE = path.join(__dirname, 'team_rewards.json');
+const SCHEDULED_TASKS_FILE = path.join(__dirname, 'team_scheduled_tasks.json');
 
 const NEON_API_URL = process.env.NEON_API_URL || 'https://ep-lively-union-ae21qnok.apirest.c-2.us-east-2.aws.neon.tech/neondb/rest/v1';
 const NEON_API_KEY = process.env.NEON_API_KEY;
@@ -92,7 +101,7 @@ function sendJson(res, statusCode, data) {
     res.writeHead(statusCode, {
         'Content-Type': 'application/json; charset=utf-8',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
+        'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS, PUT, PATCH',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, Access-Control-Request-Private-Network',
         'Access-Control-Allow-Private-Network': 'true'
     });
@@ -370,6 +379,105 @@ async function handleSendSms(req, res) {
     }
 }
 
+// --- Scheduler Logic ---
+
+async function sendSmsInternal(to, message) {
+    const providers = getProviderStatus();
+    const anyProviderConfigured = providers.textbee || providers.smsgateLocal || providers.smsgate3rdParty || providers.twilio;
+    if (!anyProviderConfigured) {
+        return { ok: false, error: 'No SMS provider configured' };
+    }
+    const msg = applySenderNameToMessage(message);
+    
+    if (providers.textbee) return sendViaTextBee({ to, message: msg });
+    if (providers.smsgateLocal) return sendViaSmsGateLocal({ to, message: msg });
+    if (providers.smsgate3rdParty) return sendViaSmsGate3rdParty({ to, message: msg });
+    return sendViaTwilio({ to, message: msg });
+}
+
+async function processScheduledTasks() {
+    try {
+        const now = new Date();
+        const nowIso = now.toISOString();
+        let tasksToProcess = [];
+
+        // 1. Fetch pending tasks
+        if (NEON_API_KEY) {
+             const resp = await neonRequest('GET', '/team_scheduled_tasks?status=eq.pending');
+             if (resp.ok && Array.isArray(resp.data)) {
+                 tasksToProcess = resp.data.filter(t => t.scheduledAt <= nowIso);
+             }
+        } else {
+             if (fs.existsSync(SCHEDULED_TASKS_FILE)) {
+                 const raw = fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8');
+                 const list = JSON.parse(raw || '[]');
+                 tasksToProcess = list.filter(t => t.status === 'pending' && t.scheduledAt <= nowIso);
+             }
+        }
+
+        if (!tasksToProcess.length) return;
+        console.log(`Processing ${tasksToProcess.length} scheduled tasks...`);
+
+        for (const sTask of tasksToProcess) {
+            // Create the real task
+            const newTask = {
+                id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                title: sTask.title,
+                memberId: sTask.memberId,
+                eventName: sTask.eventName,
+                description: sTask.description,
+                dueDate: sTask.dueDate,
+                status: 'pending',
+                createdAt: nowIso,
+                updatedAt: nowIso,
+                rewardAmount: sTask.rewardAmount
+            };
+
+            let saveSuccess = false;
+
+            // Save Task
+            if (NEON_API_KEY) {
+                const save = await neonRequest('POST', '/team_tasks', newTask);
+                saveSuccess = save.ok;
+            } else {
+                let list = [];
+                if (fs.existsSync(TASKS_FILE)) {
+                    list = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8') || '[]');
+                }
+                list.push(newTask);
+                fs.writeFileSync(TASKS_FILE, JSON.stringify(list));
+                saveSuccess = true;
+            }
+
+            if (saveSuccess) {
+                // Update Scheduled Task Status
+                if (NEON_API_KEY) {
+                    await neonRequest('PATCH', `/team_scheduled_tasks?id=eq.${sTask.id}`, { status: 'completed', processedAt: nowIso });
+                } else {
+                    let list = JSON.parse(fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8') || '[]');
+                    const idx = list.findIndex(t => t.id === sTask.id);
+                    if (idx !== -1) {
+                        list[idx].status = 'completed';
+                        list[idx].processedAt = nowIso;
+                        fs.writeFileSync(SCHEDULED_TASKS_FILE, JSON.stringify(list));
+                    }
+                }
+
+                // Send SMS
+                if (sTask.memberPhone) {
+                    const smsBody = `New Task Assigned: ${newTask.title}\nDue: ${newTask.dueDate || 'No Date'}\nCheck Team Portal for details.`;
+                    await sendSmsInternal(sTask.memberPhone, smsBody);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error processing scheduled tasks:', e);
+    }
+}
+
+// Run scheduler every 60 seconds
+setInterval(processScheduledTasks, 60 * 1000);
+
 const MIME_TYPES = {
     '.html': 'text/html',
     '.js': 'text/javascript',
@@ -380,6 +488,7 @@ const MIME_TYPES = {
     '.gif': 'image/gif',
     '.svg': 'image/svg+xml',
     '.wav': 'audio/wav',
+    '.mp3': 'audio/mpeg',
     '.mp4': 'video/mp4',
     '.woff': 'application/font-woff',
     '.ttf': 'application/font-ttf',
@@ -399,7 +508,7 @@ http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') {
         res.writeHead(204, {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
+            'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS, PUT, PATCH',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, Access-Control-Request-Private-Network',
             'Access-Control-Allow-Private-Network': 'true'
         });
@@ -441,6 +550,97 @@ http.createServer(async (req, res) => {
             return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
         }
     }
+
+    // --- Scheduled Tasks Endpoints ---
+    if (req.method === 'GET' && u.pathname === '/api/scheduled_tasks') {
+        try {
+            if (NEON_API_KEY) {
+                const resp = await neonRequest('GET', '/team_scheduled_tasks');
+                return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, tasks: Array.isArray(resp.data) ? resp.data : [] });
+            }
+            let list = [];
+            if (fs.existsSync(SCHEDULED_TASKS_FILE)) {
+                const raw = fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            return sendJson(res, 200, { ok: true, tasks: list });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (req.method === 'POST' && u.pathname === '/api/scheduled_tasks') {
+        try {
+            const body = await readJson(req);
+            if (NEON_API_KEY) {
+                if (!body.id) throw new Error('Task ID required');
+                const check = await neonRequest('GET', `/team_scheduled_tasks?id=eq.${body.id}`);
+                const exists = check.ok && Array.isArray(check.data) && check.data.length > 0;
+                const method = exists ? 'PATCH' : 'POST';
+                const endpoint = exists ? `/team_scheduled_tasks?id=eq.${body.id}` : '/team_scheduled_tasks';
+                const save = await neonRequest(method, endpoint, body);
+                return sendJson(res, save.ok ? 200 : 500, { ok: save.ok, task: Array.isArray(save.data) ? save.data[0] : save.data });
+            }
+
+            const next = body && typeof body === 'object' ? body : {};
+            let list = [];
+            if (fs.existsSync(SCHEDULED_TASKS_FILE)) {
+                const raw = fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            const id = String(next.id || '').trim() || ('sch_task_' + Date.now());
+            const nowIso = new Date().toISOString();
+            const idx = list.findIndex(t => String(t && t.id) === id);
+            
+            // Default fields for new tasks
+            const defaults = idx === -1 ? {
+                status: 'pending',
+                createdAt: nowIso
+            } : {};
+
+            const payload = {
+                ...defaults,
+                ...list[idx] || {},
+                ...next,
+                id,
+                updatedAt: nowIso
+            };
+            if (idx === -1) list.push(payload);
+            else list[idx] = payload;
+            fs.writeFileSync(SCHEDULED_TASKS_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true, task: payload });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (req.method === 'DELETE' && u.pathname === '/api/scheduled_tasks') {
+        try {
+            const id = u.searchParams.get('id');
+            if (!id) return sendJson(res, 400, { ok: false, error: 'Missing query: provide id' });
+
+            if (NEON_API_KEY) {
+                const endpoint = `/team_scheduled_tasks?id=eq.${encodeURIComponent(id)}`;
+                const del = await neonRequest('DELETE', endpoint);
+                return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
+            }
+
+            let list = [];
+            if (fs.existsSync(SCHEDULED_TASKS_FILE)) {
+                const raw = fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            list = list.filter(t => String(t && t.id) !== String(id));
+            fs.writeFileSync(SCHEDULED_TASKS_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+    // --- End Scheduled Tasks Endpoints ---
 
     if (req.method === 'POST' && u.pathname === '/api/team_tasks') {
         try {
@@ -631,12 +831,14 @@ http.createServer(async (req, res) => {
         filePath += 'index.html';
     }
 
+    console.log('Request for:', filePath);
+
     const extname = String(path.extname(filePath)).toLowerCase();
     const contentType = MIME_TYPES[extname] || 'application/octet-stream';
 
-    fs.readFile(filePath, (error, content) => {
-        if (error) {
-            if (error.code === 'ENOENT') {
+    fs.stat(filePath, (err, stats) => {
+        if (err) {
+            if (err.code === 'ENOENT') {
                 fs.readFile('./404.html', (error, content) => {
                     if (error) {
                         res.writeHead(404);
@@ -648,12 +850,28 @@ http.createServer(async (req, res) => {
                 });
             } else {
                 res.writeHead(500);
-                res.end('Sorry, check with the site admin for error: ' + error.code + ' ..\n');
+                res.end('Server Error: ' + err.code);
             }
-        } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content, 'utf-8');
+            return;
         }
+
+        const fileSize = stats.size;
+        
+        // Simple stream for now to debug ERR_ABORTED
+        const head = {
+            'Content-Length': fileSize,
+            'Content-Type': contentType,
+        };
+        res.writeHead(200, head);
+        const file = fs.createReadStream(filePath);
+        file.on('error', (err) => {
+            console.error('Stream error:', err);
+            if (!res.headersSent) {
+                res.writeHead(500);
+                res.end('Stream Error');
+            }
+        });
+        file.pipe(res);
     });
 
 }).listen(PORT);
