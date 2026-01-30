@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Login - The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <div class="login-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+                <h2 class="login-title">Client Portal</h2>
+                <p class="login-subtitle">Sign in to manage your events</p>
+            </div>
+            
+            <div id="loginError" class="alert alert-error hidden"></div>
+            
+            <!-- Google Login Button Container -->
+            <div style="margin-bottom: var(--spacing-lg);">
+                <div id="googleLoginBtn"></div>
+            </div>
+            
+            <div style="text-align: center; margin: var(--spacing-md) 0; position: relative;">
+                <span style="background: var(--bg-white); padding: 0 var(--spacing-sm); color: var(--text-secondary); font-size: 0.875rem;">OR</span>
+                <hr style="position: absolute; top: 50%; left: 0; right: 0; margin: 0; border: none; border-top: 1px solid var(--border-color); z-index: -1;">
+            </div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Email Address</label>
+                    <input type="email" id="username" name="username" required placeholder="client@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="remember"> Remember me
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+            </form>
+
+            <div style="margin-top: var(--spacing-md); text-align: center;">
+                <button type="button" class="btn btn-secondary" id="createUserBtn" style="width: 100%;">New User? Create Account</button>
+            </div>
+
+            <div id="signupSection" class="hidden" style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--border-color);">
+                <h3 style="margin: 0 0 var(--spacing-md) 0; font-size: 1.1rem; font-weight: 800; color: #000;">Create Account</h3>
+                <form id="signupForm">
+                    <div class="form-group">
+                        <label for="signupName">Full Name</label>
+                        <input type="text" id="signupName" required placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupEmail">Email Address</label>
+                        <input type="email" id="signupEmail" required placeholder="you@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupCompany">Company (optional)</label>
+                        <input type="text" id="signupCompany" placeholder="Company name">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="signupPassword">Password</label>
+                            <input type="password" id="signupPassword" required placeholder="Create password">
+                        </div>
+                        <div class="form-group">
+                            <label for="signupConfirmPassword">Confirm Password</label>
+                            <input type="password" id="signupConfirmPassword" required placeholder="Confirm password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+                    <button type="button" class="btn btn-secondary" id="cancelSignupBtn" style="width: 100%; margin-top: var(--spacing-sm);">Cancel</button>
+                </form>
+            </div>
+            
+            <div style="margin-top: var(--spacing-md); text-align: center;">
+                <a href="../../index.html" style="color: var(--text-secondary); font-size: 0.875rem;">← Back to Website</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+        <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+    </footer>
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <script src="../../js/auth.js"></script>
+    <script>
+        const DEFAULT_GOOGLE_CLIENT_ID = '276377545304-0l8mhmlolu1ou2t58lsc7isjq1qe5s0g.apps.googleusercontent.com';
+        const GOOGLE_CLIENT_ID = sessionStorage.getItem('apex_google_client_id') || DEFAULT_GOOGLE_CLIENT_ID;
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../../sw.js', { scope: '/' })
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed: ', err));
+            });
+        }
+
+        function showLoginError(message) {
+            const errorDiv = document.getElementById('loginError');
+            if (!errorDiv) return;
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function hideLoginError() {
+            const errorDiv = document.getElementById('loginError');
+            if (!errorDiv) return;
+            errorDiv.classList.add('hidden');
+        }
+
+        function decodeJwtPayload(jwt) {
+            if (!jwt || typeof jwt !== 'string') throw new Error('Missing token');
+            const parts = jwt.split('.');
+            if (parts.length < 2) throw new Error('Invalid token');
+            let base64Url = parts[1];
+            base64Url = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const pad = base64Url.length % 4;
+            if (pad) base64Url += '='.repeat(4 - pad);
+            const json = atob(base64Url);
+            return JSON.parse(json);
+        }
+        
+        // Wait for Google Identity Services to load
+        function initializeGoogleSignIn() {
+            if (window.location.protocol === 'file:') {
+                showFallbackGoogleButton();
+                showLoginError('Google Sign-In needs the site to be opened via http(s). Please run with a local server (ex: Live Server) and add the origin in Google Cloud Console.');
+                return;
+            }
+
+            if (typeof google === 'undefined' || !google.accounts) {
+                // Google script not loaded yet, try again
+                setTimeout(initializeGoogleSignIn, 100);
+                return;
+            }
+            
+            // Check if Client ID is configured
+            if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
+                // Show fallback button if not configured
+                showFallbackGoogleButton();
+                showLoginError('Google Sign-In is not configured. Set sessionStorage apex_google_client_id or update the Client ID.');
+                return;
+            }
+            
+            // Initialize Google Sign-In
+            try {
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleSignIn,
+                    auto_select: false,
+                    cancel_on_tap_outside: true
+                });
+            } catch (e) {
+                showFallbackGoogleButton();
+                showLoginError('Google Sign-In failed to initialize. Please verify your Client ID and Authorized JavaScript origins in Google Cloud Console.');
+                return;
+            }
+            
+            // Render Google Sign-In button
+            const buttonHost = document.getElementById('googleLoginBtn');
+            if (!buttonHost) return;
+            try {
+                google.accounts.id.renderButton(
+                    buttonHost,
+                    {
+                        theme: 'outline',
+                        size: 'large',
+                        width: '100%',
+                        text: 'signin_with',
+                        locale: 'en',
+                        logo_alignment: 'left'
+                    }
+                );
+            } catch (e) {
+                showFallbackGoogleButton();
+                showLoginError('Google Sign-In button could not be rendered. Please refresh and try again.');
+                return;
+            }
+            
+            // Also show one-tap sign-in (optional - prompts for signed-in users)
+            google.accounts.id.prompt((notification) => {
+                // Handle one-tap prompt notifications if needed
+            });
+        }
+        
+        // Show fallback button if Google OAuth is not configured
+        function showFallbackGoogleButton() {
+            document.getElementById('googleLoginBtn').innerHTML = `
+                <button type="button" class="btn btn-google" style="width: 100%; padding: var(--spacing-md); font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: var(--spacing-sm);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+            `;
+            const button = document.querySelector('#googleLoginBtn button');
+            if (button) {
+                button.addEventListener('click', handleGoogleFallback);
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeGoogleSignIn, 50);
+        });
+        
+        // Handle Google Sign-In callback
+        function handleGoogleSignIn(response) {
+            try {
+                if (!response || !response.credential) {
+                    throw new Error('Missing Google credential');
+                }
+
+                const payload = decodeJwtPayload(response.credential);
+                
+                // Extract user information
+                const googleUser = {
+                    email: payload.email,
+                    name: payload.name,
+                    picture: payload.picture,
+                    email_verified: payload.email_verified,
+                    sub: payload.sub
+                };
+                
+                // Create user data from Google login
+                const userData = {
+                    username: googleUser.email,
+                    name: googleUser.name,
+                    role: 'client',
+                    company: 'Client Company',
+                    loginMethod: 'google',
+                    picture: googleUser.picture,
+                    emailVerified: googleUser.email_verified,
+                    googleId: googleUser.sub
+                };
+                
+                hideLoginError();
+                
+                // Store user data
+                sessionStorage.setItem('apex_user', JSON.stringify(userData));
+
+                const nameParts = (googleUser.name || '').trim().split(/\s+/).filter(Boolean);
+                const firstName = nameParts.shift() || '';
+                const lastName = nameParts.join(' ');
+                sessionStorage.setItem('apex_profile', JSON.stringify({
+                    firstName,
+                    lastName,
+                    email: googleUser.email,
+                    phone: '',
+                    company: '',
+                    picture: googleUser.picture || ''
+                }));
+                
+                // Check if plan is selected, if not redirect to plans page
+                const selectedPlan = sessionStorage.getItem('apex_selected_plan');
+                if (!selectedPlan) {
+                    window.location.href = './plans.html';
+                } else {
+                    window.location.href = './index.html';
+                }
+            } catch (error) {
+                showLoginError('Error signing in with Google. Please try again.');
+            }
+        }
+        
+        // Fallback handler if Google Client ID is not configured
+        function handleGoogleFallback() {
+            alert('Google Sign-In setup:\n\n1) Open Google Cloud Console → APIs & Credentials\n2) Create OAuth 2.0 Client ID (Web)\n3) Add Authorized JavaScript origins (your domain / localhost)\n4) Set sessionStorage key: apex_google_client_id = <your client id>\n\nFor now, please use email login below.');
+        }
+
+        function setSignupVisible(visible) {
+            const section = document.getElementById('signupSection');
+            if (!section) return;
+            section.classList.toggle('hidden', !visible);
+        }
+
+        function normalizeEmail(email) {
+            return (email || '').trim().toLowerCase();
+        }
+
+        function getCustomUsers() {
+            const raw = sessionStorage.getItem('apex_custom_users');
+            if (!raw) return {};
+            try {
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function setCustomUsers(users) {
+            sessionStorage.setItem('apex_custom_users', JSON.stringify(users || {}));
+        }
+
+        function isReservedUser(email) {
+            const reserved = [
+                'client@example.com',
+                'theapexcirclestarexuniversity@gmail.com',
+                'divyansh.gupta@apexcircle.com',
+                'anurag.sangar@apexcircle.com',
+                'palak@apexcircle.com',
+                'aman.yadav@apexcircle.com',
+                'aarti.yadav@apexcircle.com'
+            ];
+            return reserved.includes(email);
+        }
+
+        function initSignup() {
+            const createBtn = document.getElementById('createUserBtn');
+            const cancelBtn = document.getElementById('cancelSignupBtn');
+            const signupForm = document.getElementById('signupForm');
+
+            if (createBtn) {
+                createBtn.addEventListener('click', function () {
+                    setSignupVisible(true);
+                    hideLoginError();
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function () {
+                    setSignupVisible(false);
+                });
+            }
+
+            if (!signupForm) return;
+
+            signupForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const nameEl = document.getElementById('signupName');
+                const emailEl = document.getElementById('signupEmail');
+                const companyEl = document.getElementById('signupCompany');
+                const signupPasswordEl = document.getElementById('signupPassword');
+                const confirmPasswordEl = document.getElementById('signupConfirmPassword');
+
+                const name = String((nameEl && nameEl.value) || '').trim();
+                const email = normalizeEmail((emailEl && emailEl.value) || '');
+                const company = String((companyEl && companyEl.value) || '').trim();
+                const password = (signupPasswordEl && signupPasswordEl.value) || '';
+                const confirmPassword = (confirmPasswordEl && confirmPasswordEl.value) || '';
+
+                if (!name || !email || !password) {
+                    showLoginError('Please fill all required fields.');
+                    return;
+                }
+                if (password.length < 6) {
+                    showLoginError('Password must be at least 6 characters.');
+                    return;
+                }
+                if (password !== confirmPassword) {
+                    showLoginError('Passwords do not match.');
+                    return;
+                }
+                if (isReservedUser(email)) {
+                    showLoginError('This email is reserved. Please use another email.');
+                    return;
+                }
+
+                const users = getCustomUsers();
+                if (users[email]) {
+                    showLoginError('User already exists. Please sign in.');
+                    return;
+                }
+
+                users[email] = {
+                    username: email,
+                    password,
+                    name,
+                    role: 'client',
+                    company: company || null,
+                    createdAt: new Date().toISOString()
+                };
+                setCustomUsers(users);
+
+                const usernameEl = document.getElementById('username');
+                const loginPasswordEl = document.getElementById('password');
+                if (usernameEl) usernameEl.value = email;
+                if (loginPasswordEl) loginPasswordEl.value = password;
+
+                setSignupVisible(false);
+                hideLoginError();
+
+                const result = typeof login === 'function' ? login(email, password, 'user') : null;
+                if (result && result.success) {
+                    const selectedPlan = sessionStorage.getItem('apex_selected_plan');
+                    if (!selectedPlan) {
+                        window.location.href = './plans.html';
+                    } else {
+                        window.location.href = './index.html';
+                    }
+                } else {
+                    showLoginError('Account created, but sign-in failed. Please try to sign in.');
+                }
+            });
+        }
+
+        initSignup();
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../../sw.js', { scope: '/' })
+                    .catch(() => {});
+            });
+        }
+    </script>
+</body>
+</html>

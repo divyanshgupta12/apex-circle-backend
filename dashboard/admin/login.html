@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <div class="login-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+                <h2 class="login-title">Admin Portal</h2>
+                <p class="login-subtitle">Sign in to access admin dashboard</p>
+            </div>
+            
+            <div id="loginError" class="alert alert-error hidden"></div>
+            
+            <form id="loginForm">
+                <input type="hidden" id="userType" value="admin">
+                <div class="form-group">
+                    <label for="username">Email Address</label>
+                    <input type="email" id="username" name="username" required placeholder="name@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                </div>
+                <div class="form-group" id="admin2faGroup" style="display: none;">
+                    <label for="admin2faCode">2FA Code</label>
+                    <input type="text" id="admin2faCode" name="admin2faCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="remember"> Remember me
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+            </form>
+            
+            <div style="margin-top: var(--spacing-md); text-align: center;">
+                <a href="../../index.html" style="color: var(--text-secondary); font-size: 0.875rem;">← Back to Website</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+        <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+    </footer>
+
+    <script src="../../js/auth.js"></script>
+</body>
+</html>

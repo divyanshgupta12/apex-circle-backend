@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Member Login - The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <div class="login-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+                <h2 class="login-title">Team Member Portal</h2>
+                <p class="login-subtitle">Sign in to access your dashboard</p>
+            </div>
+            
+            <div id="loginError" class="alert alert-error hidden"></div>
+            
+            <form id="loginForm">
+                <input type="hidden" id="userType" value="team">
+                <div class="form-group">
+                    <label for="username">Email Address</label>
+                    <input type="email" id="username" name="username" required placeholder="your.email@apexcircle.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="remember"> Remember me
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+            </form>
+            
+            <div style="margin-top: var(--spacing-md); text-align: center;">
+                <p style="font-size: 0.875rem; color: var(--text-secondary);">
+                    Need help? Contact admin at<br>
+                    theapexcirclestarexuniversity@gmail.com
+                </p>
+            </div>
+            
+            <div style="margin-top: var(--spacing-md); text-align: center;">
+                <a href="../../index.html" style="color: var(--text-secondary); font-size: 0.875rem;">← Back to Website</a>
+            </div>
+            <div style="margin-top: var(--spacing-md); text-align: center; font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8;">
+                <p>&copy; 2024 The Apex Circle. Powered by DTS</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/auth.js?v=3"></script>
+    <script>
+        // Force form submission handler re-binding
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('loginForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('Login form submitted');
+                    // handleLogin is defined in auth.js
+                    if (typeof handleLogin === 'function') {
+                        handleLogin(e);
+                    } else {
+                        console.error('handleLogin not found');
+                        alert('System Error: Login function missing. Please refresh.');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+
+

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - The Apex Circle</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/public.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="navbar container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">
+                    <img src="assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                </div>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About Us</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="process.html">Our Process</a></li>
+                <li><a href="collaborations.html">Collaborations</a></li>
+                <li><a href="team.html">Our Team</a></li>
+                <li><a href="gallery.html" class="active">Gallery</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li><a href="dashboard/login.html">Admin/Team</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="dashboard/user/login.html" class="btn btn-secondary">Login</a>
+                <button class="mobile-menu-toggle">☰</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Event Gallery</h1>
+            <p>Showcasing our successful events and memorable moments</p>
+        </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section class="section">
+        <div class="container">
+            <div class="section-title">
+                <h2>Our Events</h2>
+                <p>Explore highlights from our recent events</p>
+            </div>
+            
+            <!-- Teacher's Day Event Details -->
+            <div class="content-card" style="max-width: 800px; width: 100%; margin: 0 auto var(--spacing-md); text-align: center;">
+                <h3 style="color: #000000; margin-bottom: var(--spacing-sm); font-weight: 900; font-size: 2rem;">Teacher's Day Celebration 2025</h3>
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md); font-size: 1.1rem;">
+                    <strong>Date:</strong> September 5, 2025<br>
+                    <strong>Venue:</strong> Starex University, Gurgaon<br>
+                    <strong>Description:</strong> Celebrating the legacy of Dr. Sarvepalli Radhakrishnan and honoring our educators
+                </p>
+            </div>
+
+            <!-- Images Slider -->
+            <div class="events-slider-container">
+                <button class="slider-btn prev-btn" aria-label="Previous image">&#10094;</button>
+                <div class="events-track-container">
+                    <ul class="events-track">
+                        <!-- Slide 1 -->
+                        <li class="event-slide current-slide">
+                            <div class="gallery-item clickable-image" style="aspect-ratio: 16/9; cursor: pointer;" data-image="assets/images/starex-university-building.jpg" data-alt="Starex University Main Building">
+                                <img src="assets/images/starex-university-building.jpg" alt="Starex University Main Building" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="gallery-overlay"><span class="gallery-icon">🔍</span></div>
+                            </div>
+                        </li>
+                        <!-- Slide 2 -->
+                        <li class="event-slide">
+                            <div class="gallery-item clickable-image" style="aspect-ratio: 16/9; cursor: pointer;" data-image="assets/images/teachers-day-2025-performance.jpeg" data-alt="Teacher's Day 2025 - Cultural Performance">
+                                <img src="assets/images/teachers-day-2025-performance.jpeg" alt="Teacher's Day 2025 - Cultural Performance" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="gallery-overlay"><span class="gallery-icon">🔍</span></div>
+                            </div>
+                        </li>
+                        <!-- Slide 3 -->
+                        <li class="event-slide">
+                            <div class="gallery-item clickable-image" style="aspect-ratio: 16/9; cursor: pointer;" data-image="assets/images/teachers-day-2025-awards.jpeg" data-alt="Teacher's Day 2025 - Award Ceremony">
+                                <img src="assets/images/teachers-day-2025-awards.jpeg" alt="Teacher's Day 2025 - Award Ceremony" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="gallery-overlay"><span class="gallery-icon">🔍</span></div>
+                            </div>
+                        </li>
+                        <!-- Slide 4 -->
+                        <li class="event-slide">
+                            <div class="gallery-item clickable-image" style="aspect-ratio: 16/9; cursor: pointer;" data-image="assets/images/teachers-day-2025-stage.jpeg" data-alt="Teacher's Day 2025 - Stage Event">
+                                <img src="assets/images/teachers-day-2025-stage.jpeg" alt="Teacher's Day 2025 - Stage Event" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="gallery-overlay"><span class="gallery-icon">🔍</span></div>
+                            </div>
+                        </li>
+                        <!-- Slide 5 -->
+                        <li class="event-slide">
+                            <div class="gallery-item clickable-image" style="aspect-ratio: 16/9; cursor: pointer;" data-image="assets/images/teachers-day-2025-ceremony.jpeg" data-alt="Teacher's Day 2025 - Ceremony">
+                                <img src="assets/images/teachers-day-2025-ceremony.jpeg" alt="Teacher's Day 2025 - Ceremony" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="gallery-overlay"><span class="gallery-icon">🔍</span></div>
+                            </div>
+                        </li>
+                        <!-- Slide 6 (Video) -->
+                        <li class="event-slide">
+                            <div class="gallery-item" style="aspect-ratio: 16/9; background: #000;">
+                                <video controls style="width: 100%; height: 100%; object-fit: cover;">
+                                    <source src="assets/images/event-highlights.mp4" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <button class="slider-btn next-btn" aria-label="Next image">&#10095;</button>
+                
+                <div class="slider-nav">
+                    <button class="slider-indicator current-slide"></button>
+                    <button class="slider-indicator"></button>
+                    <button class="slider-indicator"></button>
+                    <button class="slider-indicator"></button>
+                    <button class="slider-indicator"></button>
+                    <button class="slider-indicator"></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Image Lightbox Modal -->
+    <div id="imageLightbox" class="lightbox" style="display: none;">
+        <div class="lightbox-overlay"></div>
+        <div class="lightbox-content">
+            <button class="lightbox-close" aria-label="Close lightbox">&times;</button>
+            <button class="lightbox-prev" aria-label="Previous image">&#8249;</button>
+            <button class="lightbox-next" aria-label="Next image">&#8250;</button>
+            <img class="lightbox-image" src="" alt="">
+            <div class="lightbox-caption"></div>
+        </div>
+    </div>
+
+    <!-- Event Categories -->
+    <section class="section" style="background: var(--bg-light);">
+        <div class="container">
+            <div class="section-title">
+                <h2>Event Categories</h2>
+                <p>We manage diverse events across multiple sectors</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>Corporate Events</h3>
+                    <p>Conferences, seminars, product launches, and executive gatherings</p>
+                </div>
+                <div class="feature-card">
+                    <h3>University Events</h3>
+                    <p>Graduation ceremonies, academic conferences, and career fairs</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Premium Galas</h3>
+                    <p>High-profile award ceremonies and exclusive gatherings</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Institutional Events</h3>
+                    <p>Government functions and public sector gatherings</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>The Apex Circle</h3>
+                    <p>Premium Event Management & Organization</p>
+                    <p>Strategic Partner: DTS</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <a href="index.html">Home</a>
+                    <a href="about.html">About Us</a>
+                    <a href="services.html">Services</a>
+                    <a href="team.html">Our Team</a>
+                    <a href="contact.html">Contact</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Services</h3>
+                    <a href="services.html">Event Planning</a>
+                    <a href="services.html">Guest Management</a>
+                    <a href="services.html">Sponsorship</a>
+                    <a href="services.html">Marketing & PR</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact</h3>
+                    <p>Email: theapexcirclestarexuniversity@gmail.com</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
+

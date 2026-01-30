@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sponsorship Management - Admin | The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-user">
+                <div class="sidebar-user-name">The Apex Circle</div>
+                <div class="sidebar-user-role">Administrator</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">
+                    <span class="sidebar-menu-icon">📊</span>
+                    <span>Dashboard</span>
+                </a></li>
+                <li><a href="events.html">
+                    <span class="sidebar-menu-icon">📅</span>
+                    <span>Events</span>
+                </a></li>
+                <li><a href="users.html">
+                    <span class="sidebar-menu-icon">👥</span>
+                    <span>Users & Clients</span>
+                </a></li>
+                <li><a href="team-management.html">
+                    <span class="sidebar-menu-icon">👔</span>
+                    <span>Team Management</span>
+                </a></li>
+                <li><a href="guests.html">
+                    <span class="sidebar-menu-icon">🎫</span>
+                    <span>Guests & VIPs</span>
+                </a></li>
+                <li><a href="sponsorships.html" class="active">
+                    <span class="sidebar-menu-icon">🤝</span>
+                    <span>Sponsorships</span>
+                </a></li>
+                <li><a href="marketing.html">
+                    <span class="sidebar-menu-icon">📢</span>
+                    <span>Marketing & PR</span>
+                </a></li>
+                <li><a href="analytics.html">
+                    <span class="sidebar-menu-icon">📈</span>
+                    <span>Analytics</span>
+                </a></li>
+                <li><a href="settings.html">
+                    <span class="sidebar-menu-icon">⚙️</span>
+                    <span>Settings</span>
+                </a></li>
+                <li><a href="#" id="logoutBtn">
+                    <span class="sidebar-menu-icon">🚪</span>
+                    <span>Logout</span>
+                </a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Sponsorship & Finance Tracking</h1>
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary" onclick="showAddSponsorshipModal()">Add Sponsorship</button>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h2 class="content-card-title">All Sponsorships</h2>
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm">Filter</button>
+                        <button class="btn btn-secondary btn-sm">Export</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table" id="sponsorshipsTable">
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Event</th>
+                                <th>Sponsor</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Tier</th>
+                                <th>Contact</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+                <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+            </footer>
+        </main>
+    </div>
+
+    <div id="sponsorshipModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Sponsorship</h2>
+                <span class="modal-close" onclick="closeModal('sponsorshipModal')">&times;</span>
+            </div>
+            <form id="sponsorshipForm">
+                <div class="form-group">
+                    <label for="sponsorClientEmail">Client Email *</label>
+                    <input type="email" id="sponsorClientEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="sponsorEvent">Event *</label>
+                    <input type="text" id="sponsorEvent" required>
+                </div>
+                <div class="form-group">
+                    <label for="sponsorName">Sponsor *</label>
+                    <input type="text" id="sponsorName" required>
+                </div>
+                <div class="form-group">
+                    <label for="sponsorAmount">Amount (₹) *</label>
+                    <input type="number" id="sponsorAmount" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="sponsorStatus">Status *</label>
+                    <select id="sponsorStatus" required>
+                        <option value="pending">Pending</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="sponsorTier">Tier *</label>
+                    <select id="sponsorTier" required>
+                        <option value="Bronze">Bronze</option>
+                        <option value="Silver">Silver</option>
+                        <option value="Gold">Gold</option>
+                        <option value="Platinum">Platinum</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="sponsorContact">Contact</label>
+                    <input type="text" id="sponsorContact">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('sponsorshipModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Sponsorship</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/data.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+</body>
+</html>

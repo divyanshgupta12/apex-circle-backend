@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Admin | The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-user">
+                <div class="sidebar-user-name">The Apex Circle</div>
+                <div class="sidebar-user-role">Administrator</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">
+                    <span class="sidebar-menu-icon">📊</span>
+                    <span>Dashboard</span>
+                </a></li>
+                <li><a href="events.html">
+                    <span class="sidebar-menu-icon">📅</span>
+                    <span>Events</span>
+                </a></li>
+                <li><a href="users.html">
+                    <span class="sidebar-menu-icon">👥</span>
+                    <span>Users & Clients</span>
+                </a></li>
+                <li><a href="team-management.html">
+                    <span class="sidebar-menu-icon">👔</span>
+                    <span>Team Management</span>
+                </a></li>
+                <li><a href="guests.html">
+                    <span class="sidebar-menu-icon">🎫</span>
+                    <span>Guests & VIPs</span>
+                </a></li>
+                <li><a href="sponsorships.html">
+                    <span class="sidebar-menu-icon">🤝</span>
+                    <span>Sponsorships</span>
+                </a></li>
+                <li><a href="marketing.html">
+                    <span class="sidebar-menu-icon">📢</span>
+                    <span>Marketing & PR</span>
+                </a></li>
+                <li><a href="analytics.html">
+                    <span class="sidebar-menu-icon">📈</span>
+                    <span>Analytics</span>
+                </a></li>
+                <li><a href="settings.html" class="active">
+                    <span class="sidebar-menu-icon">⚙️</span>
+                    <span>Settings</span>
+                </a></li>
+                <li><a href="#" id="logoutBtn">
+                    <span class="sidebar-menu-icon">🚪</span>
+                    <span>Logout</span>
+                </a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">System Settings</h1>
+            </div>
+
+            <div class="content-card">
+                <h2 class="content-card-title">General Settings</h2>
+                <form id="generalSettingsForm">
+                    <div class="form-group">
+                        <label for="companyName">Company Name</label>
+                        <input type="text" id="companyName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="companyEmail">Company Email</label>
+                        <input type="email" id="companyEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="companyPhone">Company Phone</label>
+                        <input type="tel" id="companyPhone">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
+            </div>
+
+            <div class="content-card">
+                <h2 class="content-card-title">Notification Settings</h2>
+                <form id="notificationSettingsForm">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="notifyNewEvents"> Email notifications for new events
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="notifyUserRegistrations"> Email notifications for user registrations
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="notifySponsorshipUpdates"> Email notifications for sponsorship updates
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="notifySmsUrgent"> SMS notifications for urgent matters
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Preferences</button>
+                </form>
+            </div>
+
+            <div class="content-card">
+                <h2 class="content-card-title">Security Settings</h2>
+                <form id="securitySettingsForm">
+                    <div class="form-group">
+                        <label for="sessionTimeout">Session Timeout (minutes)</label>
+                        <input type="number" id="sessionTimeout" min="5" max="120">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="requireAdmin2fa"> Require two-factor authentication for admins
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="passwordComplexity"> Enable password complexity requirements
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Security Settings</button>
+                </form>
+            </div>
+        </main>
+
+        <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+            <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+        </footer>
+    </div>
+
+    <script src="../../js/data.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+</body>
+</html>

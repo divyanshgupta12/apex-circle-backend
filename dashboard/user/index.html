@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-user">
+                <div class="sidebar-user-name">John Smith</div>
+                <div class="sidebar-user-role">Client</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html" class="active">
+                    <span class="sidebar-menu-icon">📊</span>
+                    <span>Dashboard</span>
+                </a></li>
+                <li><a href="plans.html">
+                    <span class="sidebar-menu-icon">💎</span>
+                    <span>Pricing Plans</span>
+                </a></li>
+                <li><a href="events.html">
+                    <span class="sidebar-menu-icon">📅</span>
+                    <span>My Events</span>
+                </a></li>
+                <li><a href="guests.html">
+                    <span class="sidebar-menu-icon">👥</span>
+                    <span>Guest List</span>
+                </a></li>
+                <li><a href="sponsorships.html">
+                    <span class="sidebar-menu-icon">🤝</span>
+                    <span>Sponsorships</span>
+                </a></li>
+                <li><a href="marketing.html">
+                    <span class="sidebar-menu-icon">📢</span>
+                    <span>Marketing & PR</span>
+                </a></li>
+                <li><a href="profile.html">
+                    <span class="sidebar-menu-icon">⚙️</span>
+                    <span>Profile & Settings</span>
+                </a></li>
+                <li><a href="#" id="logoutBtn">
+                    <span class="sidebar-menu-icon">🚪</span>
+                    <span>Logout</span>
+                </a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Dashboard Overview</h1>
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary">New Event</button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div id="statsGrid" class="stats-grid"></div>
+
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h2 class="content-card-title">Plan Checklist</h2>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--text-secondary); font-weight: 600;">Progress:</span>
+                        <span id="planChecklistProgress" style="color: var(--primary-color); font-weight: 900;"></span>
+                    </div>
+                </div>
+                <div id="planChecklist"></div>
+            </div>
+
+            <!-- Recent Events -->
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h2 class="content-card-title">My Events</h2>
+                    <a href="events.html" class="btn btn-secondary btn-sm">View All</a>
+                </div>
+                <div class="table-container">
+                    <table class="table" id="eventsTable">
+                        <thead>
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Registrations</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Guests -->
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h2 class="content-card-title">Recent Guests</h2>
+                    <a href="guests.html" class="btn btn-secondary btn-sm">View All</a>
+                </div>
+                <div class="table-container">
+                    <table class="table" id="guestsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Event</th>
+                                <th>Status</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+                <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+            </footer>
+        </main>
+    </div>
+
+    <script src="../../js/data.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+    <script>
+        // Check if user has selected a plan on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = getCurrentUser();
+            if (!user || (user.role !== 'client' && user.role !== 'user')) {
+                window.location.href = './login.html';
+                return;
+            }
+            
+            // Check if plan is selected, if not redirect to plans page
+            const selectedPlan = sessionStorage.getItem('apex_selected_plan');
+            if (!selectedPlan) {
+                window.location.href = './plans.html';
+            }
+        });
+    </script>
+</body>
+</html>

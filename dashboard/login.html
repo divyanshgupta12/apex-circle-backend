@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - The Apex Circle</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../assets/images/apex-circle-logo.png">
+    <style>
+        .login-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-xl);
+        }
+        .login-option-card {
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: var(--spacing-xl);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+        }
+        .login-option-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+        .login-option-card a {
+            text-decoration: none;
+            color: inherit;
+        }
+        .login-option-icon {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-md);
+        }
+        .login-option-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #000000;
+            margin-bottom: var(--spacing-sm);
+        }
+        .login-option-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .login-option-button {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: #000000;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+        }
+        .login-option-button:hover {
+            background: var(--primary-color);
+            transform: scale(1.05);
+        }
+        .login-header-main {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+            margin-top: var(--spacing-lg);
+        }
+        .login-header-main h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #000000;
+            margin-bottom: var(--spacing-sm);
+        }
+        .login-header-main p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+        .login-logo {
+            width: 180px;
+            margin: 0 auto var(--spacing-md);
+        }
+        .login-logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            mix-blend-mode: multiply;
+        }
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-light);
+            padding: var(--spacing-md);
+        }
+        @media (max-width: 768px) {
+            .login-options {
+                grid-template-columns: 1fr;
+            }
+            .login-header-main h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card" style="max-width: 1000px; width: 100%;">
+            <div class="login-header">
+                <div class="login-logo">
+                    <div class="login-logo-icon">
+                        <img src="../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="login-header-main">
+                <h1>Welcome to The Apex Circle</h1>
+                <p>Select your portal to continue</p>
+            </div>
+            
+            <div class="login-options">
+                <!-- Admin Login -->
+                <div class="login-option-card" onclick="window.location.href='admin/'">
+                    <div class="login-option-icon">👨‍💼</div>
+                    <div class="login-option-title">Admin Portal</div>
+                    <div class="login-option-description">
+                        Access administrative dashboard to manage events, users, team members, and system settings.
+                    </div>
+                    <button class="login-option-button" type="button" onclick="event.stopPropagation(); window.location.href='admin/'">
+                        Admin Login
+                    </button>
+                </div>
+                
+                <!-- Team Login -->
+                <div class="login-option-card" onclick="window.location.href='team/'">
+                    <div class="login-option-icon">👔</div>
+                    <div class="login-option-title">Team Portal</div>
+                    <div class="login-option-description">
+                        View your assigned tasks, event schedules, and rewards. Access your personal dashboard.
+                    </div>
+                    <button class="login-option-button" type="button" onclick="event.stopPropagation(); window.location.href='team/'">
+                        Team Login
+                    </button>
+                </div>
+                
+                <!-- Client Login -->
+                <div class="login-option-card" onclick="window.location.href='user/'">
+                    <div class="login-option-icon">👤</div>
+                    <div class="login-option-title">Client Portal</div>
+                    <div class="login-option-description">
+                        Manage your events, view registrations, guests, and access your client dashboard.
+                    </div>
+                    <button class="login-option-button" type="button" onclick="event.stopPropagation(); window.location.href='user/'">
+                        Client Login
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: var(--spacing-xl); text-align: center;">
+                <a href="../index.html" style="color: var(--text-secondary); font-size: 0.875rem; text-decoration: underline;">
+                    ← Back to Website
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js', { scope: '/' })
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+</body>
+</html>

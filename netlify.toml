@@ -1,0 +1,8 @@
+[build]
+  publish = "."
+  command = "# no build command"
+
+[functions]
+  [functions.cron_tasks]
+    # Schedule for 9:00 AM IST (3:30 AM UTC)
+    schedule = "30 3 * * *"

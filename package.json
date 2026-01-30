@@ -1,0 +1,21 @@
+{
+  "name": "the-apex-circle",
+  "version": "1.0.0",
+  "description": "Premium Event Management PWA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "node build.js"
+  },
+  "keywords": [
+    "event-management",
+    "pwa"
+  ],
+  "author": "The Apex Circle",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

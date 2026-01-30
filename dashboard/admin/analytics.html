@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Admin | The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-user">
+                <div class="sidebar-user-name">The Apex Circle</div>
+                <div class="sidebar-user-role">Administrator</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">
+                    <span class="sidebar-menu-icon">📊</span>
+                    <span>Dashboard</span>
+                </a></li>
+                <li><a href="events.html">
+                    <span class="sidebar-menu-icon">📅</span>
+                    <span>Events</span>
+                </a></li>
+                <li><a href="users.html">
+                    <span class="sidebar-menu-icon">👥</span>
+                    <span>Users & Clients</span>
+                </a></li>
+                <li><a href="team-management.html">
+                    <span class="sidebar-menu-icon">👔</span>
+                    <span>Team Management</span>
+                </a></li>
+                <li><a href="guests.html">
+                    <span class="sidebar-menu-icon">🎫</span>
+                    <span>Guests & VIPs</span>
+                </a></li>
+                <li><a href="sponsorships.html">
+                    <span class="sidebar-menu-icon">🤝</span>
+                    <span>Sponsorships</span>
+                </a></li>
+                <li><a href="marketing.html">
+                    <span class="sidebar-menu-icon">📢</span>
+                    <span>Marketing & PR</span>
+                </a></li>
+                <li><a href="analytics.html" class="active">
+                    <span class="sidebar-menu-icon">📈</span>
+                    <span>Analytics</span>
+                </a></li>
+                <li><a href="settings.html">
+                    <span class="sidebar-menu-icon">⚙️</span>
+                    <span>Settings</span>
+                </a></li>
+                <li><a href="#" id="logoutBtn">
+                    <span class="sidebar-menu-icon">🚪</span>
+                    <span>Logout</span>
+                </a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Analytics Dashboard</h1>
+                <div class="dashboard-actions">
+                    <button class="btn btn-secondary" id="exportAnalyticsBtn">Export Report</button>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h2 class="content-card-title">Monthly Revenue</h2>
+                <div id="monthlyRevenueChart" class="chart-placeholder"></div>
+            </div>
+
+            <div class="content-card">
+                <h2 class="content-card-title">Event Types Distribution</h2>
+                <div id="eventTypesChart" class="chart-placeholder"></div>
+            </div>
+
+            <div class="content-card">
+                <h2 class="content-card-title">Team Leaderboard</h2>
+                <div class="chart-container" style="position: relative; height: 400px; width: 100%;">
+                    <canvas id="teamLeaderboardChart"></canvas>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h2 class="content-card-title">Key Metrics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <p class="stat-card-title">Average Event Revenue</p>
+                            <span class="stat-card-icon">💰</span>
+                        </div>
+                        <h3 class="stat-card-value" id="metricAvgRevenue">₹0</h3>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <p class="stat-card-title">Average Attendance</p>
+                            <span class="stat-card-icon">👥</span>
+                        </div>
+                        <h3 class="stat-card-value" id="metricAvgAttendance">0</h3>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <p class="stat-card-title">Confirmed Sponsorship Revenue</p>
+                            <span class="stat-card-icon">📈</span>
+                        </div>
+                        <h3 class="stat-card-value" id="metricSponsorshipRevenue">₹0</h3>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <p class="stat-card-title">Event Success Rate</p>
+                            <span class="stat-card-icon">✅</span>
+                        </div>
+                        <h3 class="stat-card-value" id="metricEventSuccess">0%</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+                <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+            </footer>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../../js/data.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+</body>
+</html>

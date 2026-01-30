@@ -1,0 +1,7 @@
+{
+  "SMS_SERVER_PORT": "8010",
+  "SMS_SERVER_API_KEY": "apex_local_key",
+  "TEXTBEE_API_KEY": "71fd5d16-5ad4-404f-92fc-a761fcfd80bc",
+  "TEXTBEE_DEVICE_ID": "6952d9b68a8761ab1a3f0924",
+  "SMS_SENDER_NAME": "The Apex Circle"
+}

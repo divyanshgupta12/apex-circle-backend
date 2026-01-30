@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Management - Admin | The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+    <style>
+        .tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: var(--spacing-lg);
+        }
+        .tab {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+        .tab:hover {
+            color: var(--primary-color);
+        }
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .member-card {
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-user">
+                <div class="sidebar-user-name">The Apex Circle</div>
+                <div class="sidebar-user-role">Administrator</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">
+                    <span class="sidebar-menu-icon">📊</span>
+                    <span>Dashboard</span>
+                </a></li>
+                <li><a href="events.html">
+                    <span class="sidebar-menu-icon">📅</span>
+                    <span>Events</span>
+                </a></li>
+                <li><a href="users.html">
+                    <span class="sidebar-menu-icon">👥</span>
+                    <span>Users & Clients</span>
+                </a></li>
+                <li><a href="team-management.html" class="active">
+                    <span class="sidebar-menu-icon">👔</span>
+                    <span>Team Management</span>
+                </a></li>
+                <li><a href="guests.html">
+                    <span class="sidebar-menu-icon">🎫</span>
+                    <span>Guests & VIPs</span>
+                </a></li>
+                <li><a href="sponsorships.html">
+                    <span class="sidebar-menu-icon">🤝</span>
+                    <span>Sponsorships</span>
+                </a></li>
+                <li><a href="marketing.html">
+                    <span class="sidebar-menu-icon">📢</span>
+                    <span>Marketing & PR</span>
+                </a></li>
+                <li><a href="analytics.html">
+                    <span class="sidebar-menu-icon">📈</span>
+                    <span>Analytics</span>
+                </a></li>
+                <li><a href="settings.html">
+                    <span class="sidebar-menu-icon">⚙️</span>
+                    <span>Settings</span>
+                </a></li>
+                <li><a href="#" id="logoutBtn">
+                    <span class="sidebar-menu-icon">🚪</span>
+                    <span>Logout</span>
+                </a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-header">
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                    <h1 class="dashboard-title">Team Management</h1>
+                    <div id="neonStatus" style="font-size: 0.875rem; color: var(--text-secondary);">
+                        Neon: Checking status...
+                    </div>
+                </div>
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary" onclick="showAddTaskModal()">Assign Task</button>
+                    <button class="btn btn-primary" onclick="showAddScheduleModal()">Add Event Schedule</button>
+                    <button class="btn btn-primary" onclick="showAddRewardModal()">Assign Reward</button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" data-tab="members">👥 Team Members</button>
+                <button class="tab" data-tab="tasks">📋 Task Assignment</button>
+                <button class="tab" data-tab="schedule">📅 Event Schedule</button>
+                <button class="tab" data-tab="rewards">🎁 Reward Management</button>
+                <button class="tab" data-tab="training">🎥 Training</button>
+            </div>
+
+            <!-- Team Members Tab -->
+            <div class="tab-content active" id="membersTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Team Members</h2>
+                    </div>
+                    <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                        <div style="font-weight: 700; margin-bottom: var(--spacing-sm);">Backend Connection Settings (Localhost Only)</div>
+                        <div class="form-row" style="margin-bottom: var(--spacing-sm);">
+                <div class="form-group full-width">
+                    <label for="remoteApiUrlInput">Neon API URL</label>
+                    <input id="remoteApiUrlInput" type="text" placeholder="https://.../neondb/rest/v1">
+                </div>
+            </div>
+            <div class="form-row" style="margin-bottom: var(--spacing-sm);">
+                <div class="form-group full-width">
+                    <label for="neonApiKeyInput">Neon API Key (Bearer Token)</label>
+                    <input id="neonApiKeyInput" type="password" placeholder="kp_..." autocomplete="off">
+                    <small style="color: var(--text-secondary);">Required for direct connection since environment variables are unavailable.</small>
+                </div>
+            </div>
+            <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
+                            <button class="btn btn-secondary btn-sm" type="button" onclick="saveBackendSettings()">Save Connection</button>
+                            <div id="backendStatus" style="color: var(--text-secondary); font-size: 0.875rem;"></div>
+                        </div>
+                    </div>
+
+                    <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                        <div style="font-weight: 700; margin-bottom: var(--spacing-sm);">SMS Settings</div>
+                        <div class="form-row" style="margin-bottom: var(--spacing-sm);">
+                            <div class="form-group">
+                                <label for="smsApiUrlInput">SMS API URL</label>
+                                <input id="smsApiUrlInput" type="text" placeholder="http://127.0.0.1:8010/api/sms">
+                            </div>
+                            <div class="form-group">
+                                <label for="smsServerApiKeyInput">SMS Server API Key</label>
+                                <input id="smsServerApiKeyInput" type="text" placeholder="apex_local_key">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-bottom: var(--spacing-sm);">
+                            <div class="form-group">
+                                <label for="textBeeApiKeyInput">TextBee API Key (Optional)</label>
+                                <input id="textBeeApiKeyInput" type="password" placeholder="TextBee API Key for direct send" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label for="textBeeDeviceIdInput">TextBee Device ID (Optional)</label>
+                                <input id="textBeeDeviceIdInput" type="text" placeholder="TextBee Device ID" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-bottom: var(--spacing-sm);">
+                            <div class="form-group">
+                                <label for="smsTestTo">Test Number</label>
+                                <input id="smsTestTo" type="tel" placeholder="+91XXXXXXXXXX">
+                            </div>
+                            <div class="form-group">
+                                <label for="smsTestMessage">Test Message</label>
+                                <input id="smsTestMessage" type="text" placeholder="Test SMS from The Apex Circle">
+                            </div>
+                        </div>
+                        <div class="form-group full-width" style="margin-bottom: var(--spacing-sm);">
+                            <label for="smsBroadcastMessage">Message to All Team Members</label>
+                            <input id="smsBroadcastMessage" type="text" placeholder="Announcement for all team members">
+                        </div>
+                        <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
+                            <button class="btn btn-secondary btn-sm" type="button" onclick="saveSmsSettings()">Save Settings</button>
+                            <button class="btn btn-primary btn-sm" type="button" onclick="sendTestSms()">Send Test SMS</button>
+                            <button class="btn btn-primary btn-sm" type="button" onclick="sendSmsToAll()">Send to All</button>
+                            <div id="smsStatus" style="color: var(--text-secondary); font-size: 0.875rem;"></div>
+                        </div>
+                    </div>
+                    <div id="teamMembersList"></div>
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div class="tab-content" id="tasksTab">
+                <!-- Scheduled Tasks Section (Moved from Modal) -->
+                <div class="content-card" style="margin-bottom: var(--spacing-lg); border-bottom: 2px solid var(--border-color); padding-bottom: var(--spacing-lg);">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Scheduled / Recurring Tasks</h2>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-outline-danger btn-sm" onclick="cleanupDuplicates()" style="border: 1px solid #dc3545; color: #dc3545; background: transparent;">Cleanup Tasks</button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="cleanupDuplicateSchedules()" style="border: 1px solid #dc3545; color: #dc3545; background: transparent;">Cleanup Schedules</button>
+                            <button id="syncTasksBtn" class="btn btn-outline-primary btn-sm" onclick="manualSyncSchedules()" style="border: 1px solid var(--primary-color); color: var(--primary-color); background: transparent;">Sync Schedules & Tasks</button>
+                            <button class="btn btn-warning btn-sm" onclick="recoverLegacyTasks()">Recover Legacy</button>
+                            <button class="btn btn-primary btn-sm" onclick="showAddScheduledTaskForm()">+ New Scheduled Task</button>
+                        </div>
+                    </div>
+                    
+                    <!-- List of Scheduled Tasks -->
+                    <div class="table-container" style="max-height: 300px; overflow-y: auto; margin-bottom: var(--spacing-lg); border: 1px solid var(--border-color); border-radius: 4px;">
+                        <table class="table" id="scheduledTasksTable">
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Assigned To</th>
+                                    <th>Scheduled At</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Add/Edit Form (Hidden by default) -->
+                    <div id="scheduledTaskFormContainer" style="display: none; border-top: 1px solid var(--border-color); padding-top: var(--spacing-md);">
+                        <h3 style="margin-bottom: var(--spacing-md);" id="scheduledTaskFormTitle">Schedule New Task</h3>
+                        <form id="scheduledTaskForm">
+                            <input type="hidden" id="scheduledTaskId">
+                            <div class="form-row">
+                                <div class="form-group full-width">
+                                    <label for="scheduledTaskTitle">Task Title</label>
+                                    <input type="text" id="scheduledTaskTitle" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group full-width">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="scheduledTaskWeekly">
+                                        <span style="font-weight: 500;">Weekly Task (Mon-Fri)</span>
+                                    </label>
+                                    <small style="color: var(--text-secondary); display: block; margin-top: 4px;">Task will be automatically assigned every weekday.</small>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="scheduledTaskMember">Assign To</label>
+                                    <select id="scheduledTaskMember" required>
+                                        <option value="">Select Team Member</option>
+                                        <!-- Populated by JS -->
+                                    </select>
+                                </div>
+                                <div class="form-group" id="scheduledAtGroup">
+                                    <label for="scheduledTaskTime">Schedule Assignment At</label>
+                                    <input type="datetime-local" id="scheduledTaskTime">
+                                    <small style="color: var(--text-secondary);">Task will be created at this time</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Weekly Task Options (Hidden by default) -->
+                            <div id="weeklyTaskOptions" style="display: none; background: var(--bg-light); padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="scheduledTaskStartTime">Start Time</label>
+                                        <input type="time" id="scheduledTaskStartTime" value="09:00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="scheduledTaskEndTime">End Time</label>
+                                        <input type="time" id="scheduledTaskEndTime" value="23:59">
+                                    </div>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="scheduledTaskAutoExtend" checked>
+                                        <span>Auto-extend if incomplete (max 3 times)</span>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-group full-width" style="margin-top: 10px; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 10px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 10px;">
+                                        <input type="checkbox" id="scheduledTaskDailyVariations">
+                                        <span style="font-weight: 500;">Different Task per Day</span>
+                                    </label>
+                                    
+                                    <div id="dailyVariationsContainer" style="display: none; padding-left: 10px; border-left: 2px solid var(--primary-color);">
+                                        <!-- Days will be generated here -->
+                                        <div class="day-input" style="margin-bottom: 10px;">
+                                            <label style="font-weight: 600; font-size: 0.85em; color: var(--primary-color);">Monday</label>
+                                            <input type="text" class="daily-title" data-day="1" placeholder="Task Title for Monday" style="margin-bottom: 5px;">
+                                            <textarea class="daily-desc" data-day="1" placeholder="Description for Monday" rows="1" style="font-size: 0.85em;"></textarea>
+                                        </div>
+                                        <div class="day-input" style="margin-bottom: 10px;">
+                                            <label style="font-weight: 600; font-size: 0.85em; color: var(--primary-color);">Tuesday</label>
+                                            <input type="text" class="daily-title" data-day="2" placeholder="Task Title for Tuesday" style="margin-bottom: 5px;">
+                                            <textarea class="daily-desc" data-day="2" placeholder="Description for Tuesday" rows="1" style="font-size: 0.85em;"></textarea>
+                                        </div>
+                                        <div class="day-input" style="margin-bottom: 10px;">
+                                            <label style="font-weight: 600; font-size: 0.85em; color: var(--primary-color);">Wednesday</label>
+                                            <input type="text" class="daily-title" data-day="3" placeholder="Task Title for Wednesday" style="margin-bottom: 5px;">
+                                            <textarea class="daily-desc" data-day="3" placeholder="Description for Wednesday" rows="1" style="font-size: 0.85em;"></textarea>
+                                        </div>
+                                        <div class="day-input" style="margin-bottom: 10px;">
+                                            <label style="font-weight: 600; font-size: 0.85em; color: var(--primary-color);">Thursday</label>
+                                            <input type="text" class="daily-title" data-day="4" placeholder="Task Title for Thursday" style="margin-bottom: 5px;">
+                                            <textarea class="daily-desc" data-day="4" placeholder="Description for Thursday" rows="1" style="font-size: 0.85em;"></textarea>
+                                        </div>
+                                        <div class="day-input" style="margin-bottom: 10px;">
+                                            <label style="font-weight: 600; font-size: 0.85em; color: var(--primary-color);">Friday</label>
+                                            <input type="text" class="daily-title" data-day="5" placeholder="Task Title for Friday" style="margin-bottom: 5px;">
+                                            <textarea class="daily-desc" data-day="5" placeholder="Description for Friday" rows="1" style="font-size: 0.85em;"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="scheduledTaskEvent">Event (Optional)</label>
+                                    <input type="text" id="scheduledTaskEvent">
+                                </div>
+                                <div class="form-group">
+                                    <label for="scheduledTaskDueDate">Task Due Date</label>
+                                    <input type="date" id="scheduledTaskDueDate">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group full-width">
+                                    <label for="scheduledTaskDesc">Description</label>
+                                    <textarea id="scheduledTaskDesc" rows="3"></textarea>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="scheduledTaskReward">Reward Amount (₹)</label>
+                                    <input type="number" id="scheduledTaskReward" min="0" value="0">
+                                </div>
+                            </div>
+                            <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                                <button type="button" class="btn btn-secondary" onclick="hideScheduledTaskForm()">Cancel</button>
+                                <button type="submit" class="btn btn-primary" id="saveScheduledTaskBtn">Save Schedule</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">All Tasks</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshTasks()">Refresh</button>
+                    </div>
+                    <div class="table-container">
+                        <h3 style="margin: var(--spacing-md) 0 var(--spacing-sm); color: var(--primary-color);">Today</h3>
+                        <table class="table" id="tasksTableToday">
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Assigned To</th>
+                                    <th>Event</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                    <th>Reward</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <h3 style="margin: var(--spacing-lg) 0 var(--spacing-sm); color: var(--text-secondary);">Previous</h3>
+                        <table class="table" id="tasksTablePrevious">
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Assigned To</th>
+                                    <th>Event</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                    <th>Reward</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Tab -->
+            <div class="tab-content" id="scheduleTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Event Schedules</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshSchedule()">Refresh</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="table" id="scheduleTable">
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Team Member</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Type of Work</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rewards Tab -->
+            <div class="tab-content" id="rewardsTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">All Rewards</h2>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="btn btn-secondary btn-sm" onclick="refreshRewards()">Refresh</button>
+                            <button class="btn btn-danger btn-sm" onclick="resetRewardBalancesForNewEvent()">Reset Balances for New Event</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <h3 style="margin: var(--spacing-md) 0 var(--spacing-sm); color: var(--primary-color);">Today</h3>
+                        <table class="table" id="rewardsTableToday">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Team Member</th>
+                                    <th>Event</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <h3 style="margin: var(--spacing-lg) 0 var(--spacing-sm); color: var(--text-secondary);">Previous</h3>
+                        <table class="table" id="rewardsTablePrevious">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Team Member</th>
+                                    <th>Event</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Tab -->
+            <div class="tab-content" id="trainingTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Training Videos</h2>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="btn btn-secondary btn-sm" onclick="refreshTraining()">Refresh</button>
+                            <button class="btn btn-primary btn-sm" onclick="showAddTrainingModal()">Add Training Video</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="table" id="trainingTable">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Provided By</th>
+                                    <th>Assigned To</th>
+                                    <th>Link</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+                <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Modal for Task Assignment -->
+    <div id="taskModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Assign Task</h2>
+                <span class="modal-close" onclick="closeModal('taskModal')">&times;</span>
+            </div>
+            <form id="taskForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="taskTitle">Task Title *</label>
+                        <input type="text" id="taskTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskMember">Assign To *</label>
+                        <select id="taskMember" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskEvent">Event *</label>
+                        <input type="text" id="taskEvent" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskDescription">Description *</label>
+                        <textarea id="taskDescription" rows="4" required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="taskDueDate">Due Date *</label>
+                            <input type="date" id="taskDueDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskStatus">Status *</label>
+                            <select id="taskStatus" required>
+                                <option value="pending">Pending</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('taskModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Schedule -->
+    <div id="scheduleModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Event Schedule</h2>
+                <span class="modal-close" onclick="closeModal('scheduleModal')">&times;</span>
+            </div>
+            <form id="scheduleForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="scheduleEvent">Event Name *</label>
+                        <input type="text" id="scheduleEvent" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="scheduleMember">Team Member *</label>
+                        <select id="scheduleMember" required></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="scheduleDate">Date *</label>
+                            <input type="date" id="scheduleDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="scheduleStartTime">Start Time *</label>
+                            <input type="time" id="scheduleStartTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="scheduleEndTime">End Time *</label>
+                            <input type="time" id="scheduleEndTime" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="scheduleTypeOfWork">Type of Work *</label>
+                        <select id="scheduleTypeOfWork" required>
+                            <option value="">Select Type</option>
+                            <option value="Written">Written</option>
+                            <option value="Audio">Audio</option>
+                            <option value="Video">Video</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="scheduleDescription">Description</label>
+                        <textarea id="scheduleDescription" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('scheduleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Reward -->
+    <div id="rewardModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Assign Reward</h2>
+                <span class="modal-close" onclick="closeModal('rewardModal')">&times;</span>
+            </div>
+            <form id="rewardForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="rewardTitle">Reward Title *</label>
+                        <input type="text" id="rewardTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rewardMember">Team Member *</label>
+                        <select id="rewardMember" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="rewardEvent">Event *</label>
+                        <input type="text" id="rewardEvent" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="rewardAmount">Amount (₹) *</label>
+                            <input type="number" id="rewardAmount" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="rewardDate">Date *</label>
+                            <input type="date" id="rewardDate" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="rewardDescription">Description</label>
+                        <textarea id="rewardDescription" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('rewardModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign Reward</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Training -->
+    <div id="trainingModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Training Video</h2>
+                <span class="modal-close" onclick="closeModal('trainingModal')">&times;</span>
+            </div>
+            <form id="trainingForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="trainingTitle">Title *</label>
+                        <input type="text" id="trainingTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="trainingProvider">Provided By *</label>
+                        <input type="text" id="trainingProvider" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="trainingMember">Assign To *</label>
+                        <select id="trainingMember" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Video Source *</label>
+                        <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="videoSourceType" value="url" checked> External URL
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="videoSourceType" value="file"> Upload File
+                            </label>
+                        </div>
+
+                        <div id="videoUrlGroup">
+                            <input type="url" id="trainingUrl" placeholder="https://www.youtube.com/watch?v=... or https://.../video.mp4">
+                        </div>
+
+                        <div id="videoFileGroup" style="display: none;">
+                            <input type="file" id="trainingFile" accept="video/*" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">Max size: 3MB (Demo Limit)</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="trainingDescription">Description</label>
+                        <textarea id="trainingDescription" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('trainingModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Video</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+
+    <!-- Contact Edit Modal -->
+    <div id="contactModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2>Update Contact</h2>
+                <span class="modal-close" onclick="closeModal('contactModal')">&times;</span>
+            </div>
+            <form id="contactForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Team Member</label>
+                        <div id="contactMemberName" style="font-weight: 700; color: #000000;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactPhone">Phone Number *</label>
+                        <input type="tel" id="contactPhone" required placeholder="+91XXXXXXXXXX">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('contactModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="taskProofViewModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 640px;">
+            <div class="modal-header">
+                <h2>Task Proof</h2>
+                <span class="modal-close" onclick="closeModal('taskProofViewModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Task</label>
+                    <div id="taskProofViewTaskTitle" style="font-weight: 700; color: #000000;"></div>
+                </div>
+                <div class="form-group">
+                    <img id="taskProofViewImage" alt="Task proof" style="max-width: 100%; border-radius: 8px; display: none;">
+                    <div id="taskProofViewPlaceholder" style="color: var(--text-secondary);">No proof image uploaded.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('taskProofViewModal')">Close</button>
+                <button type="button" class="btn btn-primary" onclick="handleApproveCurrentTaskProof()">Approve</button>
+                <button type="button" class="btn btn-danger" onclick="handleRejectCurrentTaskProof()">Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/api-config.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/data.js"></script>
+    <script src="../../js/team-management.js"></script>
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Register from root scope
+                navigator.serviceWorker.register('../../sw.js', { scope: '/' })
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+</body>
+</html>
+
+

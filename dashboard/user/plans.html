@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Your Plan - The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+    <style>
+        .plans-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+        .plans-header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        .plans-header h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #000000;
+            margin-bottom: var(--spacing-sm);
+        }
+        .plans-header p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-xl);
+        }
+        .plan-card {
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: var(--spacing-xl);
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+        .plan-card.featured {
+            border-color: var(--primary-color);
+            border-width: 3px;
+            transform: scale(1.05);
+        }
+        .plan-badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .plan-name {
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: #000000;
+            margin-bottom: var(--spacing-sm);
+        }
+        .plan-people {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+        .plan-price {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-xs);
+        }
+        .plan-price-currency {
+            font-size: 1.5rem;
+            vertical-align: top;
+        }
+        .plan-price-period {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin: var(--spacing-lg) 0;
+            text-align: left;
+            flex-grow: 1;
+        }
+        .plan-features li {
+            padding: var(--spacing-sm) 0;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+        }
+        .plan-features li:before {
+            content: "✓";
+            color: #4CAF50;
+            font-weight: bold;
+            margin-right: var(--spacing-sm);
+            font-size: 1.2rem;
+        }
+        .plan-button {
+            width: 100%;
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: #000000;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: var(--spacing-lg);
+        }
+        .plan-button:hover {
+            background: var(--primary-color);
+            transform: scale(1.05);
+        }
+        .plan-card.featured .plan-button {
+            background: var(--primary-color);
+        }
+        .plan-card.featured .plan-button:hover {
+            background: #000000;
+        }
+        @media (max-width: 768px) {
+            .plans-grid {
+                grid-template-columns: 1fr;
+            }
+            .plan-card.featured {
+                transform: scale(1);
+            }
+            .plans-header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        /* Add-ons Section */
+        .addons-section {
+            margin-top: var(--spacing-xl);
+            padding-top: var(--spacing-xl);
+            border-top: 1px solid var(--border-color);
+        }
+        .addons-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        .addons-header h2 {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-xs);
+        }
+        .addons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-md);
+        }
+        .addon-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .addon-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: var(--spacing-xs);
+        }
+        .addon-price {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: var(--spacing-sm);
+        }
+        .addon-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: auto;
+            flex-wrap: wrap;
+        }
+        .addon-select, .addon-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex-grow: 1;
+        }
+        .btn-add {
+            background: #000000;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            width: 100%;
+        }
+        .btn-add:hover {
+            background: var(--primary-color);
+        }
+
+        /* Cart Widget */
+        .cart-widget {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .cart-widget.active {
+            display: flex;
+        }
+        .cart-header {
+            background: #000000;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+        .cart-close {
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .cart-body {
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+        .cart-item-info {
+            flex-grow: 1;
+        }
+        .cart-item-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .cart-item-price {
+            color: #666;
+            font-size: 0.85rem;
+        }
+        .cart-item-remove {
+            color: red;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        .cart-footer {
+            padding: 15px;
+            background: #f9f9f9;
+            border-top: 1px solid #eee;
+        }
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        .btn-checkout {
+            width: 100%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-checkout:hover {
+            background: #000000;
+        }
+        .cart-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #000000;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 1001;
+            transition: transform 0.2s;
+        }
+        .cart-toggle:hover {
+            transform: scale(1.1);
+        }
+        .cart-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-user">
+                <div class="sidebar-user-name" id="clientName">Client</div>
+                <div class="sidebar-user-role">Client Portal</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">
+                    <span class="sidebar-menu-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a></li>
+                <li><a href="plans.html" class="active">
+                    <span class="sidebar-menu-icon">💎</span>
+                    <span>Pricing Plans</span>
+                </a></li>
+                <li><a href="events.html">
+                    <span class="sidebar-menu-icon">📅</span>
+                    <span>Events</span>
+                </a></li>
+                <li><a href="#" id="logoutBtn">
+                    <span class="sidebar-menu-icon">🚪</span>
+                    <span>Logout</span>
+                </a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="plans-container">
+                <div class="plans-header">
+                    <h1>Choose Your Event Plan</h1>
+                    <p>Select the perfect plan for your event size and requirements</p>
+                </div>
+
+                <div style="display: flex; justify-content: center; margin-top: var(--spacing-lg);">
+                    <button class="btn btn-primary" style="min-width: 260px;" onclick="buyConsultation()">Consult (₹1)</button>
+                </div>
+
+                <div class="plans-grid">
+                    <!-- Plan A -->
+                    <div class="plan-card">
+                        <div class="plan-name">Plan A</div>
+                        <div class="plan-people">1 - 100 People</div>
+                        <div class="plan-price">
+                            <span class="plan-price-currency">₹</span>4,999
+                        </div>
+                        <div class="plan-price-period">Per Event</div>
+                        <ul class="plan-features">
+                            <li>Registration Management</li>
+                            <li>Event Coordinator</li>
+                            <li>Guest Management</li>
+                            <li>Social Media & PR</li>
+                            <li>Host</li>
+                        </ul>
+                        <button class="plan-button" onclick="selectPlan('A', 4999)">Select Plan A</button>
+                    </div>
+
+                    <!-- Plan B (Featured) -->
+                    <div class="plan-card featured">
+                        <div class="plan-badge">POPULAR</div>
+                        <div class="plan-name">Plan B</div>
+                        <div class="plan-people">100 - 250 People</div>
+                        <div class="plan-price">
+                            <span class="plan-price-currency">₹</span>12,999
+                        </div>
+                        <div class="plan-price-period">Per Event</div>
+                        <ul class="plan-features">
+                            <li>Includes all Plan A</li>
+                            <li>2 Activities</li>
+                            <li>Creative Team Head</li>
+                            <li>VIP Coordination</li>
+                            <li>Priority Support</li>
+                            <li>Stage Coordination Team</li>
+                            <li>Sponsorship Assistance</li>
+                        </ul>
+                        <button class="plan-button" onclick="selectPlan('B', 12999)">Select Plan B</button>
+                    </div>
+
+                    <!-- Plan C -->
+                    <div class="plan-card">
+                        <div class="plan-name">Plan C</div>
+                        <div class="plan-people">250 - 500 People</div>
+                        <div class="plan-price">
+                            <span class="plan-price-currency">₹</span>16,999
+                        </div>
+                        <div class="plan-price-period">Per Event</div>
+                        <ul class="plan-features">
+                            <li>Includes all in Plan B</li>
+                            <li>Budget Management</li>
+                            <li>Multi-channel Marketing</li>
+                            <li>24/7 Dedicated Support</li>
+                        </ul>
+                        <button class="plan-button" onclick="selectPlan('C', 16999)">Select Plan C</button>
+                    </div>
+                </div>
+
+                <!-- Add-ons Section -->
+                <div class="addons-section">
+                    <div class="addons-header">
+                        <h2>Event Add-ons</h2>
+                        <p>Enhance your event with these premium extras</p>
+                    </div>
+                    <div class="addons-grid">
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Custom Slogans</div>
+                                <div class="addon-price">₹999</div>
+                            </div>
+                            <button class="btn-add" onclick="addToCart('Custom Slogans', 999)">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Guitar Performer</div>
+                                <div class="addon-price">₹499</div>
+                            </div>
+                            <button class="btn-add" onclick="addToCart('Guitar Performer', 499)">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Guitar + Singer</div>
+                                <div class="addon-price">₹999</div>
+                            </div>
+                            <button class="btn-add" onclick="addToCart('Guitar + Singer', 999)">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Lucky Draw System</div>
+                                <div class="addon-price">₹999</div>
+                            </div>
+                            <button class="btn-add" onclick="addToCart('Lucky Draw System', 999)">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Live Streaming</div>
+                                <div class="addon-price">₹499</div>
+                            </div>
+                            <button class="btn-add" onclick="addToCart('Live Streaming', 499)">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Theme-Based Stage Decoration</div>
+                                <div class="addon-price">₹4,999</div>
+                            </div>
+                            <button class="btn-add" onclick="addToCart('Theme-Based Stage Decoration', 4999)">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Drone Coverage</div>
+                                <div class="addon-price">₹3,999</div>
+                            </div>
+                            <button class="btn-add" onclick="addToCart('Drone Coverage', 3999)">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">DJ with Sound Setup</div>
+                                <div class="addon-price">From ₹4,999</div>
+                                <div class="addon-controls" style="margin-bottom: 10px;">
+                                    <select id="dj-select" class="addon-select">
+                                        <option value="4999">Basic - ₹4,999</option>
+                                        <option value="9999">Standard - ₹9,999</option>
+                                        <option value="14999">Premium - ₹14,999</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button class="btn-add" onclick="addDjToCart()">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Welcome Kit</div>
+                                <div class="addon-price">₹200 / person</div>
+                                <div class="addon-controls" style="margin-bottom: 10px;">
+                                    <input type="number" id="welcome-kit-qty" class="addon-input" placeholder="Qty" min="1" value="1">
+                                </div>
+                            </div>
+                            <button class="btn-add" onclick="addPerPersonItem('Welcome Kit', 200, 'welcome-kit-qty')">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Guest Escort / Volunteer Team</div>
+                                <div class="addon-price">₹1,499 / person</div>
+                                <div class="addon-controls" style="margin-bottom: 10px;">
+                                    <input type="number" id="volunteer-qty" class="addon-input" placeholder="Qty" min="1" value="1">
+                                </div>
+                            </div>
+                            <button class="btn-add" onclick="addPerPersonItem('Guest Escort / Volunteer Team', 1499, 'volunteer-qty')">Add to Cart</button>
+                        </div>
+
+                        <div class="addon-card">
+                            <div>
+                                <div class="addon-name">Lecture Stand</div>
+                                <div class="addon-price">₹499</div>
+                            </div>
+                            <button class="btn-add" onclick="addToCart('Lecture Stand', 499)">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+                <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+            </footer>
+        </main>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script>
+        // Check authentication
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = getCurrentUser();
+            if (!user || (user.role !== 'client' && user.role !== 'user')) {
+                window.location.href = './login.html';
+                return;
+            }
+
+            // Update user name
+            if (user.name) {
+                document.getElementById('clientName').textContent = user.name;
+            }
+
+            // Setup logout
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    logout();
+                });
+            }
+
+            // Update Razorpay API Key
+            const currentKey = 'rzp_live_RzQlbAoCi22vj4';
+            if (sessionStorage.getItem('apex_razorpay_key_id') !== currentKey) {
+                sessionStorage.setItem('apex_razorpay_key_id', currentKey);
+            }
+        });
+
+        function getRazorpayKeyId() {
+            const candidates = [
+                sessionStorage.getItem('apex_razorpay_key_id'),
+                sessionStorage.getItem('razorpay_key_id'),
+                sessionStorage.getItem('RAZORPAY_KEY_ID'),
+                sessionStorage.getItem('rzp_key_id'),
+                sessionStorage.getItem('rzpKeyId'),
+                window.RAZORPAY_KEY_ID,
+                window.razorpayKeyId
+            ];
+            const key = candidates.find(v => typeof v === 'string' && v.trim().length);
+            return key ? key.trim() : '';
+        }
+
+        function getProfileForPayment() {
+            const raw = sessionStorage.getItem('apex_profile');
+            let profile = null;
+            try { profile = raw ? JSON.parse(raw) : null; } catch (e) { profile = null; }
+            const user = getCurrentUser();
+            const fullName = (user && user.name) || '';
+            const email = (user && user.username) || '';
+            const firstName = profile && profile.firstName ? String(profile.firstName) : '';
+            const lastName = profile && profile.lastName ? String(profile.lastName) : '';
+            const profileName = `${firstName} ${lastName}`.trim();
+            return {
+                name: profileName || fullName,
+                email: (profile && profile.email) || email,
+                contact: (profile && profile.phone) || ''
+            };
+        }
+
+        function openRazorpayCheckout(item, price, onSuccess) {
+            if (!window.Razorpay) {
+                alert('Payment gateway not loaded. Please refresh and try again.');
+                return;
+            }
+            const razorpayKeyId = getRazorpayKeyId();
+            if (!razorpayKeyId) {
+                alert('Razorpay key not set. Please contact support.');
+                return;
+            }
+
+            const profile = getProfileForPayment();
+            const user = getCurrentUser();
+
+            const options = {
+                key: razorpayKeyId,
+                amount: Math.round(Number(price) * 100),
+                currency: 'INR',
+                name: 'The Apex Circle',
+                description: item,
+                prefill: {
+                    name: profile.name || undefined,
+                    email: profile.email || undefined,
+                    contact: profile.contact || undefined
+                },
+                notes: {
+                    item,
+                    user: (user && user.username) || ''
+                },
+                theme: { color: '#000000' },
+                handler: function (response) {
+                    const paymentRecord = {
+                        item,
+                        price,
+                        currency: 'INR',
+                        razorpay_payment_id: response.razorpay_payment_id || null,
+                        paidAt: new Date().toISOString(),
+                        userId: user ? user.username : null
+                    };
+                    
+                    if (typeof saveRemote === 'function') {
+                        saveRemote('/payments', paymentRecord).catch(console.error);
+                    }
+
+                    if (typeof onSuccess === 'function') {
+                        onSuccess(response);
+                        return;
+                    }
+
+                    alert('Payment successful!');
+                    window.location.href = 'index.html';
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.on('payment.failed', function (resp) {
+                const err = resp && resp.error ? resp.error : {};
+                const description = err.description || err.reason || err.message || '';
+                const code = err.code || '';
+                const messageLines = [
+                    'Payment failed.',
+                    description ? `Reason: ${description}` : '',
+                    code ? `Code: ${code}` : '',
+                    '',
+                    'If Razorpay says your site/domain (Netlify) is not registered:',
+                    '1) Razorpay Dashboard → Settings → Website/App Settings (or Checkout Settings)',
+                    '2) Add your Netlify domain as an allowed domain (https://your-site.netlify.app)',
+                    '3) If you use a custom domain, add that too (https://yourdomain.com)',
+                    '4) Then retry payment.'
+                ].filter(Boolean);
+                alert(messageLines.join('\n'));
+            });
+            rzp.open();
+        }
+
+        // Cart System Logic
+        let cart = JSON.parse(sessionStorage.getItem('apex_cart')) || [];
+
+        function saveCart() {
+            sessionStorage.setItem('apex_cart', JSON.stringify(cart));
+            renderCart();
+        }
+
+        function addToCart(name, price, type = 'addon') {
+            // If adding a plan, remove other plans
+            if (type === 'plan') {
+                cart = cart.filter(item => item.type !== 'plan');
+            }
+            
+            const existingItem = cart.find(item => item.name === name && item.price === price);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({
+                    name: name,
+                    price: Number(price),
+                    quantity: 1,
+                    type: type
+                });
+            }
+            
+            saveCart();
+            document.getElementById('cartWidget').classList.add('active');
+        }
+
+        function addDjToCart() {
+            const select = document.getElementById('dj-select');
+            const price = select.value;
+            const text = select.options[select.selectedIndex].text;
+            addToCart(`DJ with Sound Setup (${text})`, price);
+        }
+
+        function addPerPersonItem(name, price, inputId) {
+            const input = document.getElementById(inputId);
+            const qty = parseInt(input.value);
+            if (qty > 0) {
+                const existingItem = cart.find(item => item.name === name && item.price === price);
+                if (existingItem) {
+                    existingItem.quantity += qty;
+                } else {
+                    cart.push({
+                        name: name,
+                        price: Number(price),
+                        quantity: qty,
+                        type: 'addon'
+                    });
+                }
+                saveCart();
+                document.getElementById('cartWidget').classList.add('active');
+            } else {
+                alert('Please enter a valid quantity.');
+            }
+        }
+
+        function selectPlan(planName, price) {
+            addToCart(`Plan ${planName}`, price, 'plan');
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            saveCart();
+        }
+
+        function toggleCart() {
+            document.getElementById('cartWidget').classList.toggle('active');
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            const totalEl = document.getElementById('cartTotal');
+            const countEl = document.getElementById('cartCount');
+            
+            if (!container) return; // Guard clause
+
+            container.innerHTML = '';
+            let total = 0;
+            let count = 0;
+            
+            cart.forEach((item, index) => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                count += item.quantity;
+                
+                const html = `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-title">${item.name}</div>
+                            <div class="cart-item-price">₹${item.price.toLocaleString()} x ${item.quantity}</div>
+                        </div>
+                        <div class="cart-item-remove" onclick="removeFromCart(${index})">&times;</div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+            
+            totalEl.textContent = '₹' + total.toLocaleString('en-IN');
+            countEl.textContent = count;
+            countEl.style.display = count > 0 ? 'flex' : 'none';
+        }
+
+        function proceedToCheckout() {
+            if (cart.length === 0) {
+                alert('Your cart is empty!');
+                return;
+            }
+            
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            // Create a description of items
+            const description = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
+            // Truncate if too long for Razorpay description (max 255 chars usually)
+            const shortDesc = description.length > 200 ? description.substring(0, 200) + '...' : description;
+
+            openRazorpayCheckout('Event Package', total, function (response) {
+                const user = getCurrentUser();
+                
+                // Save plan info if a plan was in cart
+                const planItem = cart.find(item => item.type === 'plan');
+                if (planItem && user) {
+                    const planName = planItem.name.replace('Plan ', '');
+                    user.selectedPlan = planName;
+                    user.planPrice = planItem.price;
+                    sessionStorage.setItem('apex_user', JSON.stringify(user));
+                    
+                    const planData = {
+                        plan: planName,
+                        price: planItem.price,
+                        selectedAt: new Date().toISOString(),
+                        userId: user.username,
+                        paymentId: response.razorpay_payment_id || null
+                    };
+                    sessionStorage.setItem('apex_selected_plan', JSON.stringify(planData));
+                    
+                    if (user.username) {
+                        const email = String(user.username || '').trim().toLowerCase();
+                        const raw = sessionStorage.getItem('apex_client_plans');
+                        let map = {};
+                        try { map = raw ? JSON.parse(raw) : {}; } catch (e) { map = {}; }
+                        if (!map || typeof map !== 'object') map = {};
+                        map[email] = planData;
+                        sessionStorage.setItem('apex_client_plans', JSON.stringify(map));
+                    }
+                }
+
+                // Clear cart
+                cart = [];
+                saveCart();
+
+                alert(`Payment successful! Your Event Package has been booked.\nItems: ${description}`);
+                window.location.href = 'index.html';
+            });
+        }
+
+        function buyConsultation() {
+            const price = 1;
+            if (!confirm('Proceed to pay ₹1 for consultation call?')) return;
+            openRazorpayCheckout('Consultation Call', price, function () {
+                alert('Payment successful! Calling now: +91 8570957558');
+                window.location.href = 'tel:+918570957558';
+            });
+        }
+
+        // Initialize Cart UI
+        renderCart();
+    </script>
+    <!-- Cart Toggle Button -->
+    <div class="cart-toggle" onclick="toggleCart()">
+        🛒
+        <span class="cart-count" id="cartCount">0</span>
+    </div>
+
+    <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+        <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+    </footer>
+
+    <!-- Cart Widget -->
+    <div class="cart-widget" id="cartWidget">
+        <div class="cart-header">
+            <span>Your Event Cart</span>
+            <span class="cart-close" onclick="toggleCart()">×</span>
+        </div>
+        <div class="cart-body" id="cartItems">
+            <!-- Cart Items -->
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>Total</span>
+                <span id="cartTotal">₹0</span>
+            </div>
+            <button class="btn-checkout" onclick="proceedToCheckout()">Proceed to Checkout</button>
+        </div>
+    </div>
+</body>
+</html>
+
+

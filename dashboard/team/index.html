@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Dashboard - The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+    <style>
+        .tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: var(--spacing-lg);
+        }
+        .tab {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+        .tab:hover {
+            color: var(--primary-color);
+        }
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .task-card, .schedule-card, .reward-card {
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            transition: var(--transition);
+        }
+        .task-card:hover, .schedule-card:hover, .reward-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        .task-header, .schedule-header, .reward-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+        }
+        .task-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .status-pending {
+            background: #FFF3CD;
+            color: #856404;
+        }
+        .status-in-progress {
+            background: #CCE5FF;
+            color: #004085;
+        }
+        .status-completed {
+            background: #D4EDDA;
+            color: #155724;
+        }
+        .status-eliminated {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .schedule-date {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        .reward-amount {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #FFD700;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-user">
+                <img id="teamMemberPhoto" class="sidebar-user-photo" alt="Profile photo" style="display: none;">
+                <div class="sidebar-user-name" id="teamMemberName">Team Member</div>
+                <div class="sidebar-user-role" id="teamMemberPosition">Position</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html" class="active">
+                    <span class="sidebar-menu-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a></li>
+                <li><a href="#" onclick="openSyncSettings(); return false;">
+                    <span class="sidebar-menu-icon">⚙️</span>
+                    <span>Sync Settings</span>
+                </a></li>
+                <li><a href="#" id="logoutBtn">
+                    <span class="sidebar-menu-icon">🚪</span>
+                    <span>Logout</span>
+                </a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">My Dashboard</h1>
+                <div class="dashboard-actions" style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md);">
+                    <div class="stats-summary" style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+                        <div style="text-align: center; min-width: 90px;">
+                            <div style="font-size: 2rem; font-weight: 900; color: var(--primary-color);" id="totalTasks">0</div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Total Tasks</div>
+                        </div>
+                        <div style="text-align: center; min-width: 90px;">
+                            <div style="font-size: 2rem; font-weight: 900; color: #FFD700;" id="totalRewards">₹0</div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Total Rewards</div>
+                        </div>
+                        <div style="text-align: center; min-width: 90px;">
+                            <div style="font-size: 2rem; font-weight: 900; color: var(--primary-color);" id="totalPoints">0</div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">My Points</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem;">
+                        <button class="btn btn-primary btn-sm" onclick="syncNow()">Sync</button>
+                        <div id="lastSyncLabel" style="font-size: 0.75rem; color: var(--text-secondary);">
+                            Last sync: just now
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="teamNotifications" style="display: none; margin-bottom: var(--spacing-md);"></div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" data-tab="leaderboard">🏠 Home</button>
+                <button class="tab" data-tab="tasks">📋 My Tasks</button>
+                <button class="tab" data-tab="schedule">📅 Event Schedule</button>
+                <button class="tab" data-tab="rewards">🎁 My Rewards</button>
+                <button class="tab" data-tab="training">🎥 Training</button>
+                <button class="tab" data-tab="updates">📣 Portal Updates</button>
+            </div>
+
+            <!-- Leaderboard Tab (Home) -->
+            <div class="tab-content active" id="leaderboardTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Team Leaderboard</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshLeaderboard()">Refresh</button>
+                    </div>
+                    <div id="leaderboardList"></div>
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div class="tab-content" id="tasksTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Assigned Tasks</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshTasks()">Refresh</button>
+                    </div>
+                    
+                    <h3 style="margin: 0 0 var(--spacing-sm) 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Today</h3>
+                    <div id="tasksListToday"></div>
+
+                    <h3 style="margin: var(--spacing-lg) 0 var(--spacing-sm) 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Previous</h3>
+                    <div id="tasksListPrevious"></div>
+                    
+                    <div id="tasksList" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Schedule Tab -->
+            <div class="tab-content" id="scheduleTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Event Schedule</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshSchedule()">Refresh</button>
+                    </div>
+                    <div id="scheduleList"></div>
+                </div>
+            </div>
+
+            <!-- Rewards Tab -->
+            <div class="tab-content" id="rewardsTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">My Rewards</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshRewards()">Refresh</button>
+                    </div>
+                    
+                    <h3 style="margin: 0 0 var(--spacing-sm) 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Today</h3>
+                    <div id="rewardsListToday"></div>
+
+                    <h3 style="margin: var(--spacing-lg) 0 var(--spacing-sm) 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Previous</h3>
+                    <div id="rewardsListPrevious"></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="trainingTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Training Videos</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshTraining()">Refresh</button>
+                    </div>
+                    <div id="trainingList"></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="updatesTab">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Portal Updates</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshUpdates()">Refresh</button>
+                    </div>
+
+                    <div class="table-container" style="margin-top: var(--spacing-md);">
+                        <h3 style="margin: 0 0 var(--spacing-sm) 0; color: #000000;">Events</h3>
+                        <table class="table" id="teamEventsTable">
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Client</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+                <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+            </footer>
+        </main>
+    </div>
+
+    <div id="taskProofModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2>Submit Task Proof</h2>
+                <span class="modal-close" onclick="document.getElementById('taskProofModal').style.display='none'">&times;</span>
+            </div>
+            <form id="taskProofForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Task</label>
+                        <div id="taskProofTaskTitle" style="font-weight: 700; color: #000000;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskProofFile">Upload Image Proof *</label>
+                        <input type="file" id="taskProofFile" accept="image/*" required>
+                    </div>
+                    <div class="form-group">
+                        <div id="taskProofPreview"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('taskProofModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="syncSettingsModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2>Sync Settings</h2>
+                <span class="modal-close" onclick="document.getElementById('syncSettingsModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+                    Configure direct connection to Neon database if backend proxy is unavailable.
+                </p>
+                <div class="form-group">
+                    <label for="syncApiUrl">Neon API URL</label>
+                    <input type="text" id="syncApiUrl" placeholder="https://.../neondb/rest/v1" class="form-control" style="width: 100%; padding: 0.5rem; margin-bottom: var(--spacing-sm);">
+                </div>
+                <div class="form-group">
+                    <label for="syncApiKey">Neon API Key (Bearer Token)</label>
+                    <input type="password" id="syncApiKey" placeholder="kp_..." class="form-control" style="width: 100%; padding: 0.5rem;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('syncSettingsModal').style.display='none'">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveSyncSettings()">Save Connection</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/api-config.js?v=2"></script>
+    <script src="../../js/data.js?v=2"></script>
+    <script src="../../js/auth.js?v=2"></script>
+    <script src="../../js/team-dashboard.js?v=2"></script>
+    <script>
+        // Fallback debug
+        window.addEventListener('load', function() {
+            if (!document.getElementById('teamMemberName').textContent.trim() || 
+                document.getElementById('teamMemberName').textContent === 'Team Member') {
+                console.warn('Dashboard JS failed to populate data.');
+                // Try to force reload data if JS loaded but didn't run
+                if (typeof syncNow === 'function') syncNow();
+            }
+        });
+    </script>
+</body>
+</html>
+
+

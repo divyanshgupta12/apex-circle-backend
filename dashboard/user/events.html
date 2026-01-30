@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Events - The Apex Circle</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link rel="stylesheet" href="../../css/dashboard.css">
+    <link rel="manifest" href="../../manifest.json">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../../assets/images/apex-circle-logo.png">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <img src="../../assets/images/apex-circle-logo.png" alt="The Apex Circle Logo" onerror="this.style.display='none';">
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-user">
+                <div class="sidebar-user-name">John Smith</div>
+                <div class="sidebar-user-role">Client</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">
+                    <span class="sidebar-menu-icon">📊</span>
+                    <span>Dashboard</span>
+                </a></li>
+                <li><a href="events.html" class="active">
+                    <span class="sidebar-menu-icon">📅</span>
+                    <span>My Events</span>
+                </a></li>
+                <li><a href="guests.html">
+                    <span class="sidebar-menu-icon">👥</span>
+                    <span>Guest List</span>
+                </a></li>
+                <li><a href="sponsorships.html">
+                    <span class="sidebar-menu-icon">🤝</span>
+                    <span>Sponsorships</span>
+                </a></li>
+                <li><a href="marketing.html">
+                    <span class="sidebar-menu-icon">📢</span>
+                    <span>Marketing & PR</span>
+                </a></li>
+                <li><a href="profile.html">
+                    <span class="sidebar-menu-icon">⚙️</span>
+                    <span>Profile & Settings</span>
+                </a></li>
+                <li><a href="#" id="logoutBtn">
+                    <span class="sidebar-menu-icon">🚪</span>
+                    <span>Logout</span>
+                </a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">My Events</h1>
+                <div class="dashboard-actions" style="display: flex; gap: 10px; align-items: center;">
+                    <button id="bookTeamBtn" class="btn btn-primary" onclick="openBookTeamModal()" style="display: inline-block !important;">Book Team Member</button>
+                    <button class="btn btn-secondary" style="display: none;" aria-hidden="true" tabindex="-1">Create New Event</button>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h2 class="content-card-title">All Events</h2>
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm">Filter</button>
+                        <button class="btn btn-secondary btn-sm">Export</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table" id="eventsTable">
+                        <thead>
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Registrations</th>
+                                <th>Guests</th>
+                                <th>Sponsorship</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <footer class="dashboard-footer" style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+                <p>&copy; 2024 The Apex Circle. All rights reserved. | Powered by DTS</p>
+            </footer>
+        </main>
+    </div>
+
+    <style>
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .team-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .team-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .team-card.selected {
+            border-color: var(--primary-color);
+            background-color: var(--bg-light);
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+        .team-photo {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 8px;
+            background-color: #f0f0f0;
+        }
+        .team-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+        .team-role {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.2;
+        }
+    </style>
+
+    <!-- Book Team Member Modal -->
+    <div id="bookTeamMemberModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>Book Team Member</h2>
+                <span class="modal-close" onclick="closeModal('bookTeamMemberModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="bookTeamMemberForm">
+                    <div class="form-group">
+                        <label for="bookingEvent">Select Event *</label>
+                        <select id="bookingEvent" required class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                            <option value="">-- Select Event --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Booking Type *</label>
+                        <div class="radio-group" style="display: flex; gap: 20px; margin-bottom: 10px; padding: 10px 0;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="bookingType" value="singular" checked> 
+                                <span>Select Team Members (₹1,500 each)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="bookingType" value="combo"> 
+                                <span>Combo: Host + Stage Coordinator (₹2,500)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="singularSelection" class="form-group">
+                        <label>Select Team Members *</label>
+                        <div id="teamMembersList" class="team-grid">
+                            <!-- Team members injected here -->
+                        </div>
+                        <input type="hidden" id="selectedMemberIds">
+                        <div id="singularPriceDisplay" style="margin-top: 10px; font-weight: bold; color: var(--primary-color); text-align: right; display: none;">
+                            Total: ₹0
+                        </div>
+                    </div>
+
+                    <div id="comboSelection" class="form-group" style="display: none; padding: 15px; background: var(--bg-light); border-radius: 8px;">
+                        <h4 style="margin-top: 0;">Combo Package Includes:</h4>
+                        <ul style="padding-left: 20px; margin-bottom: 10px;">
+                            <li><strong>Host & Anchor</strong> - Professional event hosting</li>
+                            <li><strong>Stage Coordinator</strong> - Seamless stage management</li>
+                        </ul>
+                        <p style="margin-bottom: 0; font-weight: bold; color: var(--primary-color);">Total Price: ₹2,500</p>
+                    </div>
+
+                    <div class="modal-footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('bookTeamMemberModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Confirm Booking</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/data.js"></script>
+    <script>
+        let selectedMemberIds = new Set();
+
+        // Booking Modal Logic
+        function openBookTeamModal() {
+            const modal = document.getElementById('bookTeamMemberModal');
+            if (!modal) return;
+            
+            // Reset selection
+            selectedMemberIds.clear();
+            const selectedInput = document.getElementById('selectedMemberIds');
+            if (selectedInput) selectedInput.value = '';
+            updatePriceDisplay();
+            
+            // Populate Events
+            const eventSelect = document.getElementById('bookingEvent');
+            // Keep the first option
+            eventSelect.innerHTML = '<option value="">-- Select Event --</option>';
+            
+            // Try to get events from sessionStorage or data.js
+            let events = [];
+            try {
+                // CHANGED: Use sessionStorage instead of localStorage for data isolation
+                const storedEvents = sessionStorage.getItem('user_events');
+                if (storedEvents) {
+                    events = JSON.parse(storedEvents);
+                } else if (typeof userDashboardData !== 'undefined' && userDashboardData.events) {
+                    events = userDashboardData.events;
+                }
+            } catch(e) { console.error('Error loading events', e); }
+            
+            // Fallback for demo if empty
+            if (events.length === 0) {
+                events = [
+                    { id: 'evt001', title: 'Annual Corporate Gala' },
+                    { id: 'evt002', title: 'Product Launch 2026' }
+                ];
+            }
+
+            events.forEach(evt => {
+                const option = document.createElement('option');
+                option.value = evt.id || evt.name; 
+                option.textContent = evt.title || evt.name || 'Unnamed Event';
+                eventSelect.appendChild(option);
+            });
+            
+            // Populate Team Members if empty
+            const list = document.getElementById('teamMembersList');
+            if (list.children.length === 0 && typeof teamMembers !== 'undefined') {
+                teamMembers.forEach(member => {
+                    const card = document.createElement('div');
+                    card.className = 'team-card';
+                    card.dataset.id = member.id;
+                    card.onclick = () => toggleTeamMember(member.id);
+                    
+                    // Fix path for assets
+                    const photoPath = member.photo.startsWith('http') ? member.photo : '../../' + member.photo;
+                    
+                    card.innerHTML = `
+                        <img src="${photoPath}" alt="${member.name}" class="team-photo" onerror="this.src='../../assets/images/default-avatar.png'">
+                        <div class="team-name">${member.name}</div>
+                        <div class="team-role">${member.position}</div>
+                    `;
+                    list.appendChild(card);
+                });
+            } else {
+                 // Reset visual selection
+                 document.querySelectorAll('.team-card').forEach(c => c.classList.remove('selected'));
+            }
+            
+            modal.style.display = 'flex';
+        }
+        
+        // Toggle Team Member Logic
+        window.toggleTeamMember = function(id) {
+            const card = document.querySelector(`.team-card[data-id="${id}"]`);
+            if (selectedMemberIds.has(id)) {
+                selectedMemberIds.delete(id);
+                if (card) card.classList.remove('selected');
+            } else {
+                selectedMemberIds.add(id);
+                if (card) card.classList.add('selected');
+            }
+            
+            const selectedInput = document.getElementById('selectedMemberIds');
+            if (selectedInput) selectedInput.value = Array.from(selectedMemberIds).join(',');
+            updatePriceDisplay();
+        };
+
+        function updatePriceDisplay() {
+            const count = selectedMemberIds.size;
+            const price = count * 1500;
+            const display = document.getElementById('singularPriceDisplay');
+            if (display) {
+                display.textContent = `Total: ₹${price.toLocaleString()} (${count} member${count !== 1 ? 's' : ''})`;
+                display.style.display = count > 0 ? 'block' : 'none';
+            }
+        }
+        
+        // Booking Type Toggle
+        document.querySelectorAll('input[name="bookingType"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const type = e.target.value;
+                document.getElementById('singularSelection').style.display = type === 'singular' ? 'block' : 'none';
+                document.getElementById('comboSelection').style.display = type === 'combo' ? 'block' : 'none';
+                
+                // Reset selection if switching to combo
+                if (type === 'combo') {
+                    selectedMemberIds.clear();
+                    const selectedInput = document.getElementById('selectedMemberIds');
+                    if (selectedInput) selectedInput.value = '';
+                    document.querySelectorAll('.team-card').forEach(c => c.classList.remove('selected'));
+                    updatePriceDisplay();
+                }
+            });
+        });
+
+        // Form Submission
+        document.getElementById('bookTeamMemberForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const eventId = document.getElementById('bookingEvent').value;
+            const type = document.querySelector('input[name="bookingType"]:checked').value;
+            
+            if (!eventId) {
+                alert('Please select an event.');
+                return;
+            }
+            
+            if (type === 'singular' && selectedMemberIds.size === 0) {
+                alert('Please select at least one team member.');
+                return;
+            }
+            
+            // Construct booking object
+            const booking = {
+                id: 'bk' + Date.now(),
+                eventId,
+                type,
+                date: new Date().toISOString(),
+                status: 'Pending'
+            };
+
+            if (type === 'singular') {
+                const memberList = Array.from(selectedMemberIds).map(id => {
+                    const m = teamMembers.find(tm => tm.id === id);
+                    return m ? { id: m.id, name: m.name } : { id, name: 'Unknown' };
+                });
+                booking.members = memberList;
+                booking.memberId = memberList.map(m => m.id).join(','); // Fallback/Reference
+                booking.memberName = memberList.map(m => m.name).join(', '); // Display friendly
+                booking.price = memberList.length * 1500;
+            } else {
+                booking.memberName = 'Host + Stage Coordinator';
+                booking.price = 2500;
+            }
+            
+            // Save
+            try {
+                const bookings = JSON.parse(sessionStorage.getItem('team_bookings') || '[]');
+            bookings.push(booking);
+            sessionStorage.setItem('team_bookings', JSON.stringify(bookings));
+                alert('Booking request submitted successfully!');
+                closeModal('bookTeamMemberModal');
+                this.reset();
+                
+                // Reset Selection
+                selectedMemberIds.clear();
+                updatePriceDisplay();
+                document.querySelectorAll('.team-card').forEach(c => c.classList.remove('selected'));
+                const selectedInput = document.getElementById('selectedMemberIds');
+                if (selectedInput) selectedInput.value = '';
+                
+                // Reset to singular view
+                document.querySelector('input[name="bookingType"][value="singular"]').checked = true;
+                document.getElementById('singularSelection').style.display = 'block';
+                document.getElementById('comboSelection').style.display = 'none';
+            } catch(err) {
+                console.error(err);
+                alert('Failed to save booking.');
+            }
+        });
+
+        // Modal Close Helper
+        if (typeof window.closeModal !== 'function') {
+            window.closeModal = function(id) {
+                const modal = document.getElementById(id);
+                if (modal) modal.style.display = 'none';
+            }
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('bookTeamMemberModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/dashboard.js"></script>
+</body>
+</html>
+
