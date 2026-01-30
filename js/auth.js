@@ -304,13 +304,13 @@ function logout() {
 
     // Redirect to the login page of the current portal
     if (path.includes('/dashboard/admin/')) {
-        window.location.href = 'login.html';
+        window.location.href = 'login';
     } else if (path.includes('/dashboard/team/')) {
-        window.location.href = 'login.html';
+        window.location.href = 'login';
     } else if (path.includes('/dashboard/user/')) {
-        window.location.href = 'login.html';
+        window.location.href = 'login';
     } else if (path.includes('/dashboard/')) {
-        window.location.href = 'login.html';
+        window.location.href = 'login';
     } else {
         window.location.href = 'index.html';
     }
@@ -322,7 +322,7 @@ function requireAuth(requiredRole = null) {
     
     if (!user) {
         // Redirect to login page
-        window.location.href = 'login.html';
+        window.location.href = 'login';
         return false;
     }
 
@@ -340,7 +340,7 @@ function requireAuth(requiredRole = null) {
 
     if (user.role === 'admin' && requireAdmin2fa && !isAdmin2faVerified()) {
         clearSessionStorage();
-        window.location.href = 'login.html';
+        window.location.href = 'login';
         return false;
     }
     
@@ -349,11 +349,11 @@ function requireAuth(requiredRole = null) {
         // Redirect to appropriate dashboard using relative paths
         // Assumes we are in dashboard/{role}/...
         if (user.role === 'admin') {
-            window.location.href = '../admin/index.html';
+            window.location.href = '../admin/';
         } else if (user.role === 'team') {
-            window.location.href = '../team/index.html';
+            window.location.href = '../team/';
         } else {
-            window.location.href = '../user/index.html';
+            window.location.href = '../user/';
         }
         return false;
     }
@@ -366,7 +366,7 @@ function initAuth() {
     const currentPath = (window.location.pathname || '').toLowerCase();
     
     // Skip auth check on login pages
-    if (currentPath.includes('login.html')) {
+    if (currentPath.includes('login.html') || currentPath.endsWith('/login')) {
         // If already logged in, check if we need to redirect
         if (isAuthenticated()) {
             const user = getCurrentUser();
@@ -378,26 +378,26 @@ function initAuth() {
                     initAdmin2faLoginUi();
                     return;
                 }
-                window.location.href = 'index.html';
+                window.location.href = './';
                 return;
             }
             
             if (currentPath.includes('/team/') && user.role === 'team') {
-                window.location.href = 'index.html';
+                window.location.href = './';
                 return;
             }
             
             if (currentPath.includes('/user/') && (user.role === 'client' || user.role === 'user')) {
                 const selectedPlan = sessionStorage.getItem('apex_selected_plan');
-                window.location.href = selectedPlan ? 'index.html' : 'plans.html';
+                window.location.href = selectedPlan ? './' : 'plans';
                 return;
             }
 
             // If on main dashboard login
-            if (currentPath.endsWith('/dashboard/login.html')) {
-                if (user.role === 'admin') window.location.href = 'admin/index.html';
-                else if (user.role === 'team') window.location.href = 'team/index.html';
-                else window.location.href = 'user/index.html';
+            if (currentPath.endsWith('/dashboard/login.html') || currentPath.endsWith('/dashboard/login')) {
+                if (user.role === 'admin') window.location.href = 'admin/';
+                else if (user.role === 'team') window.location.href = 'team/';
+                else window.location.href = 'user/';
             }
         }
         return;
@@ -477,7 +477,7 @@ async function handleLogin(event) {
         } else {
             // Check if client has selected a plan
             const selectedPlan = sessionStorage.getItem('apex_selected_plan');
-            const target = selectedPlan ? '' : 'plans.html';
+            const target = selectedPlan ? '' : 'plans';
             
             // Use directory path for index, explicit path for other pages
             window.location.href = '/dashboard/user/' + target;
