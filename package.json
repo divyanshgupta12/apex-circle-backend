@@ -13,7 +13,9 @@
   ],
   "author": "The Apex Circle",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "pg": "^8.11.3"
+  },
   "devDependencies": {},
   "engines": {
     "node": ">=14.0.0"

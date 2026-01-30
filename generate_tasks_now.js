@@ -1,11 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
+const { Client } = require('pg');
 
 const TASKS_FILE = path.join(__dirname, 'team_tasks.json');
 const SCHEDULED_TASKS_FILE = path.join(__dirname, 'team_scheduled_tasks.json');
-const NEON_API_KEY = process.env.NEON_API_KEY;
-const NEON_API_URL = process.env.NEON_API_URL || 'https://ep-lively-union-ae21qnok.apirest.c-2.us-east-2.aws.neon.tech/neondb/rest/v1';
+
+const DATABASE_URL = process.env.DATABASE_URL || process.env.NEON_DB_URL;
 
 // Canonical Team Members List
 const teamMembers = [
@@ -20,35 +20,8 @@ const teamMembers = [
     { id: 'tm009', name: 'Deepti', email: 'deepti@apexcircle.com', position: 'Stage Coordinator' }
 ];
 
-function neonRequest(method, endpoint, body) {
-    return new Promise((resolve, reject) => {
-        const u = new URL(NEON_API_URL + endpoint);
-        const req = https.request(u, {
-            method,
-            headers: {
-                'Authorization': `Bearer ${NEON_API_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            }
-        }, res => {
-            let data = '';
-            res.on('data', c => data += c);
-            res.on('end', () => {
-                try {
-                    const json = JSON.parse(data);
-                    resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, data: json });
-                } catch (e) {
-                    resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, data: null });
-                }
-            });
-        });
-        req.on('error', reject);
-        if (body) req.write(JSON.stringify(body));
-        req.end();
-    });
-}
-
 async function processScheduledTasks() {
+    let client = null;
     try {
         const now = new Date();
         const nowIso = now.toISOString();
@@ -59,12 +32,20 @@ async function processScheduledTasks() {
 
         let schedules = [];
         
+        // Connect to DB if URL is available
+        if (DATABASE_URL) {
+            console.log('Connecting to Neon Database...');
+            client = new Client({
+                connectionString: DATABASE_URL,
+                ssl: { rejectUnauthorized: false }
+            });
+            await client.connect();
+        }
+
         // 1. Fetch Schedules
-        if (NEON_API_KEY) {
-             const resp = await neonRequest('GET', '/team_scheduled_tasks');
-             if (resp.ok && Array.isArray(resp.data)) {
-                 schedules = resp.data;
-             }
+        if (client) {
+             const res = await client.query('SELECT * FROM team_scheduled_tasks');
+             schedules = res.rows;
         } else {
              if (fs.existsSync(SCHEDULED_TASKS_FILE)) {
                  const raw = fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8');
@@ -74,6 +55,7 @@ async function processScheduledTasks() {
 
         if (!schedules.length) {
             console.log('No schedules found.');
+            if (client) await client.end();
             return;
         }
         let creations = 0;
@@ -128,12 +110,21 @@ async function processScheduledTasks() {
                         updatedAt: nowIso,
                         originScheduleId: sch.id,
                         autoExtend: sch.autoExtend || false,
-                        rewardAmount: sch.rewardAmount
+                        rewardAmount: sch.rewardAmount,
+                        memberPhone: member.phone || sch.memberPhone,
+                        extensionCount: 0
                     };
 
                     // Save Task
-                    if (NEON_API_KEY) {
-                        await neonRequest('POST', '/team_tasks', newTask);
+                    if (client) {
+                        const query = `
+                            INSERT INTO team_tasks (id, title, "memberId", "eventName", description, "dueDate", status, "createdAt", "updatedAt", "originScheduleId", "autoExtend", "endTime", "rewardAmount", "memberPhone", "extensionCount")
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                        `;
+                        const values = [
+                            newTask.id, newTask.title, newTask.memberId, newTask.eventName, newTask.description, newTask.dueDate, newTask.status, newTask.createdAt, newTask.updatedAt, newTask.originScheduleId, newTask.autoExtend, null, newTask.rewardAmount, newTask.memberPhone, newTask.extensionCount
+                        ];
+                        await client.query(query, values);
                     } else {
                         let list = [];
                         if (fs.existsSync(TASKS_FILE)) {
@@ -149,8 +140,16 @@ async function processScheduledTasks() {
                 const updateData = { lastGenerated: todayStr };
                 if (sch.recurrence === 'one-time') updateData.status = 'completed';
 
-                if (NEON_API_KEY) {
-                    await neonRequest('PATCH', `/team_scheduled_tasks?id=eq.${sch.id}`, updateData);
+                if (client) {
+                    const query = `
+                        UPDATE team_scheduled_tasks 
+                        SET "lastGenerated" = $1 ${sch.recurrence === 'one-time' ? ', status = $2' : ''}
+                        WHERE id = $${sch.recurrence === 'one-time' ? '3' : '2'}
+                    `;
+                    const values = [todayStr];
+                    if (sch.recurrence === 'one-time') values.push('completed');
+                    values.push(sch.id);
+                    await client.query(query, values);
                 } else {
                     let list = JSON.parse(fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8') || '[]');
                     const idx = list.findIndex(t => t.id === sch.id);
@@ -168,6 +167,8 @@ async function processScheduledTasks() {
 
     } catch (e) {
         console.error('Error processing scheduled tasks:', e);
+    } finally {
+        if (client) await client.end();
     }
 }
 

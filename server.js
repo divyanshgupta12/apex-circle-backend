@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { URLSearchParams } = require('url');
+const { Pool } = require('pg');
 
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
@@ -19,35 +20,26 @@ const REWARDS_FILE = path.join(__dirname, 'team_rewards.json');
 const SCHEDULED_TASKS_FILE = path.join(__dirname, 'team_scheduled_tasks.json');
 const TRAINING_VIDEOS_FILE = path.join(__dirname, 'team_training_videos.json');
 
-const NEON_API_URL = process.env.NEON_API_URL || 'https://ep-lively-union-ae21qnok.apirest.c-2.us-east-2.aws.neon.tech/neondb/rest/v1';
-const NEON_API_KEY = process.env.NEON_API_KEY;
+const DATABASE_URL = process.env.DATABASE_URL || process.env.NEON_DB_URL;
+let pool = null;
 
-function neonRequest(method, endpoint, body) {
-    return new Promise((resolve, reject) => {
-        const u = new URL(NEON_API_URL + endpoint);
-        const req = https.request(u, {
-            method,
-            headers: {
-                'Authorization': `Bearer ${NEON_API_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            }
-        }, res => {
-            let data = '';
-            res.on('data', c => data += c);
-            res.on('end', () => {
-                try {
-                    const json = JSON.parse(data);
-                    resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, data: json });
-                } catch (e) {
-                    resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, data: null });
-                }
-            });
-        });
-        req.on('error', reject);
-        if (body) req.write(JSON.stringify(body));
-        req.end();
+if (DATABASE_URL) {
+    console.log('Connecting to Neon Database via Postgres...');
+    pool = new Pool({
+        connectionString: DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
     });
+}
+
+async function dbQuery(text, params) {
+    if (!pool) return { ok: false, error: 'No Database Connection' };
+    try {
+        const res = await pool.query(text, params);
+        return { ok: true, rows: res.rows, rowCount: res.rowCount };
+    } catch (e) {
+        console.error('DB Error:', e);
+        return { ok: false, error: e.message };
+    }
 }
 
 // Load config from sms-config.json

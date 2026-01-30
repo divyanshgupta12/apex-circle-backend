@@ -1,4 +1,4 @@
-const https = require('https');
+const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
@@ -33,137 +33,105 @@ function writeLocalTasks(tasks) {
     }
 }
 
-// Simple fetch wrapper for Node environment (if native fetch is missing)
-function nodeFetch(url, options = {}) {
-    return new Promise((resolve, reject) => {
-        const req = https.request(url, {
-            method: options.method || 'GET',
-            headers: options.headers || {},
-        }, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                resolve({
-                    ok: res.statusCode >= 200 && res.statusCode < 300,
-                    status: res.statusCode,
-                    json: () => Promise.resolve(data ? JSON.parse(data) : {}),
-                    text: () => Promise.resolve(data)
-                });
-            });
-        });
-        req.on('error', reject);
-        if (options.body) req.write(options.body);
-        req.end();
-    });
-}
-
-// Use native fetch if available, else fallback
-const fetchFn = typeof fetch === 'function' ? fetch : nodeFetch;
-
 exports.handler = async function(event, context) {
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS'
+        'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS'
     };
 
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 204, headers };
     }
 
-    const baseUrl = process.env.NEON_API_URL || 'https://ep-lively-union-ae21qnok.apirest.c-2.us-east-2.aws.neon.tech/neondb/rest/v1';
-    // Prioritize environment variable, then check Authorization header
-    let apiKey = process.env.NEON_API_KEY;
-    if (!apiKey && event.headers) {
-        const authHeader = event.headers.authorization || event.headers.Authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            apiKey = authHeader.substring(7).trim();
-        }
-    }
+    const databaseUrl = process.env.DATABASE_URL;
 
-    // Fallback to local file system if API key is missing
-    if (!apiKey) {
-        console.warn('NEON_API_KEY missing, using local file fallback.');
+    // 1. Postgres Logic
+    if (databaseUrl) {
+        const client = new Client({
+            connectionString: databaseUrl,
+            ssl: { rejectUnauthorized: false }
+        });
+
         try {
-            // Ensure file exists or treat as empty
-            let tasks = [];
-            if (fs.existsSync(TASKS_FILE)) {
-                try {
-                    const raw = fs.readFileSync(TASKS_FILE, 'utf8');
-                    tasks = JSON.parse(raw);
-                } catch (e) {
-                    console.warn('Failed to parse local tasks file, starting fresh.', e);
-                    tasks = [];
-                }
-            }
-            if (!Array.isArray(tasks)) tasks = [];
+            await client.connect();
 
             if (event.httpMethod === 'GET') {
+                const result = await client.query('SELECT * FROM team_tasks ORDER BY "createdAt" DESC');
+                await client.end();
                 return {
                     statusCode: 200,
                     headers,
-                    body: JSON.stringify({ ok: true, tasks })
+                    body: JSON.stringify({ ok: true, tasks: result.rows })
                 };
             }
 
             if (event.httpMethod === 'POST' || event.httpMethod === 'PATCH') {
                 const body = JSON.parse(event.body);
                 if (!body.id) {
+                    await client.end();
                     return { statusCode: 400, headers, body: JSON.stringify({ ok: false, error: 'Task ID required' }) };
                 }
 
-                const idx = tasks.findIndex(t => t.id === body.id);
-                let savedTask;
-                if (idx >= 0) {
-                    tasks[idx] = { ...tasks[idx], ...body };
-                    savedTask = tasks[idx];
-                } else {
-                    savedTask = body;
-                    tasks.push(savedTask);
+                // Dynamic Upsert
+                const keys = Object.keys(body).filter(k => k !== 'id');
+                
+                if (keys.length === 0) {
+                     await client.end();
+                     return { statusCode: 200, headers, body: JSON.stringify({ ok: true, task: body }) };
                 }
 
-                // Ensure directory exists
-                const dir = path.dirname(TASKS_FILE);
-                if (!fs.existsSync(dir)) {
-                    fs.mkdirSync(dir, { recursive: true });
-                }
-                fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2));
+                const cols = keys.map(k => `"${k}"`).join(', ');
+                const vals = keys.map((_, i) => `$${i + 2}`); // $2, $3...
+                const updates = keys.map(k => `"${k}" = EXCLUDED."${k}"`).join(', ');
+
+                const query = `
+                    INSERT INTO team_tasks (id, ${cols}) 
+                    VALUES ($1, ${vals.join(', ')}) 
+                    ON CONFLICT (id) 
+                    DO UPDATE SET ${updates} 
+                    RETURNING *
+                `;
                 
+                const values = [body.id, ...keys.map(k => body[k])];
+                
+                const res = await client.query(query, values);
+                await client.end();
+
                 return {
                     statusCode: 200,
                     headers,
-                    body: JSON.stringify({ ok: true, task: savedTask })
+                    body: JSON.stringify({ ok: true, task: res.rows[0] })
                 };
             }
 
             if (event.httpMethod === 'DELETE') {
                 const id = event.queryStringParameters && event.queryStringParameters.id;
                 if (!id) {
+                    await client.end();
                     return { statusCode: 400, headers, body: JSON.stringify({ ok: false, error: 'Missing id parameter' }) };
                 }
-
-                const initialLength = tasks.length;
-                tasks = tasks.filter(t => t.id !== id);
-                if (tasks.length !== initialLength) {
-                    // Ensure directory exists
-                    const dir = path.dirname(TASKS_FILE);
-                    if (!fs.existsSync(dir)) {
-                        fs.mkdirSync(dir, { recursive: true });
-                    }
-                    fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2));
-                }
                 
+                // Handle PostgREST syntax like eq.ID if passed by client
+                const cleanId = id.startsWith('eq.') ? id.substring(3) : id;
+
+                await client.query('DELETE FROM team_tasks WHERE id = $1', [cleanId]);
+                await client.end();
+
                 return {
                     statusCode: 200,
                     headers,
                     body: JSON.stringify({ ok: true })
                 };
             }
-
+            
+            await client.end();
             return { statusCode: 405, headers, body: 'Method Not Allowed' };
 
         } catch (err) {
-            console.error('Local File Fallback Error:', err);
+            console.error('Postgres Error:', err);
+            try { await client.end(); } catch(e) {}
+            
             return {
                 statusCode: 500,
                 headers,
@@ -172,97 +140,58 @@ exports.handler = async function(event, context) {
         }
     }
 
-    // Neon DB Logic
+    // 2. Local Fallback (if no DATABASE_URL)
+    console.warn('DATABASE_URL missing, using local file fallback.');
     try {
+        let tasks = readLocalTasks();
+
         if (event.httpMethod === 'GET') {
-            const resp = await fetchFn(`${baseUrl}/team_tasks`, {
-                headers: { 'Authorization': `Bearer ${apiKey}` }
-            });
-            if (!resp.ok) throw new Error(await resp.text());
-            const tasks = await resp.json();
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({ ok: true, tasks: Array.isArray(tasks) ? tasks : [] })
+                body: JSON.stringify({ ok: true, tasks })
             };
-        } 
-        
+        }
+
         if (event.httpMethod === 'POST' || event.httpMethod === 'PATCH') {
-            const task = JSON.parse(event.body);
-            if (!task.id) throw new Error('Task ID required');
-
-            // If it's a direct PATCH request, just try to patch
-            if (event.httpMethod === 'PATCH') {
-                const patchResp = await fetchFn(`${baseUrl}/team_tasks?id=eq.${task.id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify(task)
-                });
-                if (!patchResp.ok) throw new Error(await patchResp.text());
-                const patched = await patchResp.json();
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify({ ok: true, task: patched[0] })
-                };
+            const body = JSON.parse(event.body);
+            if (!body.id) {
+                return { statusCode: 400, headers, body: JSON.stringify({ ok: false, error: 'Task ID required' }) };
             }
 
-            // POST with upsert logic
-            // Check if exists
-            const check = await fetchFn(`${baseUrl}/team_tasks?id=eq.${task.id}`, {
-                headers: { 'Authorization': `Bearer ${apiKey}` }
-            });
-            const existing = await check.json();
-            
-            let method = 'POST';
-            let url = `${baseUrl}/team_tasks`;
-            
-            if (Array.isArray(existing) && existing.length > 0) {
-                method = 'PATCH';
-                url = `${baseUrl}/team_tasks?id=eq.${task.id}`;
+            const idx = tasks.findIndex(t => t.id === body.id);
+            let savedTask;
+            if (idx >= 0) {
+                tasks[idx] = { ...tasks[idx], ...body };
+                savedTask = tasks[idx];
+            } else {
+                savedTask = body;
+                tasks.push(savedTask);
             }
 
-            const saveResp = await fetchFn(url, {
-                method: method,
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify(task)
-            });
-
-            if (!saveResp.ok) throw new Error(await saveResp.text());
-            const saved = await saveResp.json();
+            writeLocalTasks(tasks);
             
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({ ok: true, task: Array.isArray(saved) ? saved[0] : saved })
+                body: JSON.stringify({ ok: true, task: savedTask })
             };
         }
 
         if (event.httpMethod === 'DELETE') {
             const id = event.queryStringParameters && event.queryStringParameters.id;
             if (!id) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({ ok: false, error: 'Missing id parameter' })
-                };
+                return { statusCode: 400, headers, body: JSON.stringify({ ok: false, error: 'Missing id parameter' }) };
             }
+            
+            const cleanId = id.startsWith('eq.') ? id.substring(3) : id;
 
-            const delResp = await fetchFn(`${baseUrl}/team_tasks?id=eq.${encodeURIComponent(id)}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${apiKey}` }
-            });
-
-            if (!delResp.ok) throw new Error(await delResp.text());
-
+            const initialLength = tasks.length;
+            tasks = tasks.filter(t => t.id !== cleanId);
+            if (tasks.length !== initialLength) {
+                writeLocalTasks(tasks);
+            }
+            
             return {
                 statusCode: 200,
                 headers,
@@ -272,12 +201,12 @@ exports.handler = async function(event, context) {
 
         return { statusCode: 405, headers, body: 'Method Not Allowed' };
 
-    } catch (e) {
-        console.error('Neon API Error:', e);
+    } catch (err) {
+        console.error('Local File Fallback Error:', err);
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ ok: false, error: e.message })
+            body: JSON.stringify({ ok: false, error: err.message })
         };
     }
 };
