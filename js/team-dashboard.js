@@ -512,8 +512,8 @@ function loadTasks() {
         // Fallback if no tasks returned (Demo Mode)
         if (!tasks || tasks.length === 0) {
             console.log('No remote tasks found. Loading fallback demo data.');
-            // Filter fallback tasks for current user
-            tasks = FALLBACK_TASKS.filter(t => t.memberId === user.id || t.memberId === 'all');
+            // Assign fallback tasks to current user so they see something
+            tasks = FALLBACK_TASKS.map(t => ({ ...t, memberId: user.id }));
         }
 
         mem_tasks = tasks; // Update memory
@@ -531,7 +531,7 @@ function loadTasks() {
     }).catch((e) => {
         console.error("Error loading tasks:", e);
         // On error, also try fallback
-        const fallback = FALLBACK_TASKS.filter(t => t.memberId === user.id || t.memberId === 'all');
+        const fallback = FALLBACK_TASKS.map(t => ({ ...t, memberId: user.id }));
         renderTasks(fallback);
         updateTaskStats(fallback);
     });
