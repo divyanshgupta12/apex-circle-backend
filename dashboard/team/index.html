@@ -316,18 +316,37 @@
         </div>
     </div>
 
-    <script src="../../js/api-config.js?v=2"></script>
-    <script src="../../js/data.js?v=2"></script>
-    <script src="../../js/auth.js?v=2"></script>
-    <script src="../../js/team-dashboard.js?v=2"></script>
+    <script src="../../js/api-config.js?v=3"></script>
+    <script src="../../js/data.js?v=3"></script>
+    <script src="../../js/auth.js?v=3"></script>
+    <script src="../../js/team-dashboard.js?v=3"></script>
     <script>
-        // Fallback debug
+        // Fallback debug and data population
         window.addEventListener('load', function() {
-            if (!document.getElementById('teamMemberName').textContent.trim() || 
-                document.getElementById('teamMemberName').textContent === 'Team Member') {
-                console.warn('Dashboard JS failed to populate data.');
-                // Try to force reload data if JS loaded but didn't run
-                if (typeof syncNow === 'function') syncNow();
+            try {
+                // Check if data is populated
+                const nameEl = document.getElementById('teamMemberName');
+                const posEl = document.getElementById('teamMemberPosition');
+                
+                if (nameEl && (nameEl.textContent === 'Team Member' || !nameEl.textContent.trim())) {
+                    console.log('Attempting manual data population...');
+                    const userStr = sessionStorage.getItem('apex_user');
+                    if (userStr) {
+                        const user = JSON.parse(userStr);
+                        if (user && user.role === 'team') {
+                            if (user.name) nameEl.textContent = user.name;
+                            if (user.position) posEl.textContent = user.position;
+                            
+                            const photoEl = document.getElementById('teamMemberPhoto');
+                            if (photoEl && user.profilePhoto) {
+                                photoEl.src = user.profilePhoto;
+                                photoEl.style.display = 'block';
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Manual population failed:', e);
             }
         });
     </script>
