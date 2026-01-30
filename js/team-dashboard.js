@@ -82,12 +82,34 @@ let currentProofTaskId = null;
 
 // Helper to get current user safely
 function getCurrentUser() {
-    if (typeof window.getCurrentUser === 'function') return window.getCurrentUser();
-    // Fallback if auth.js not loaded yet or different scope
-    try {
-        const u = sessionStorage.getItem('apex_user');
-        return u ? JSON.parse(u) : null;
-    } catch { return null; }
+    // 1. Try global auth.js function first (if available)
+    let user = null;
+    if (typeof window.getCurrentUser === 'function') {
+        user = window.getCurrentUser();
+    } else {
+        // 2. Fallback to manual session read
+        try {
+            const u = sessionStorage.getItem('apex_user');
+            user = u ? JSON.parse(u) : null;
+        } catch { user = null; }
+    }
+
+    // 3. Robustness: Polyfill ID if missing (fix for cached sessions without ID)
+    if (user && !user.id && typeof teamMembers !== 'undefined') {
+        const found = teamMembers.find(m => m.username === user.username || m.email === user.username);
+        if (found) {
+             user.id = found.id;
+             console.log('Polyfilled user ID:', user.id);
+        }
+    }
+    
+    // 4. Demo Fallback: If still no ID but is team role, default to 'tm001' for demo
+    if (user && !user.id && user.role === 'team') {
+         console.warn('User ID still missing. Defaulting to tm001 for demo.');
+         user.id = 'tm001';
+    }
+
+    return user;
 }
 
 function updateLastSyncLabel() {

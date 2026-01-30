@@ -235,8 +235,8 @@ async function login(username, password, userType) {
                 role: teamMember.role,
                 position: teamMember.position,
                 id: teamMember.id,
-                phone: teamMember.phone || "",
-                profilePhoto: teamMember.profilePhoto || null
+                profilePhoto: teamMember.profilePhoto,
+                loginMethod: 'local'
             };
             sessionStorage.setItem('apex_user', JSON.stringify(userData));
             setSessionStartNow();
