@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================
    The Apex Circle - Team Management (Admin)
    ============================================ */
 
@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const user = getCurrentUser();
     if (!user || user.role !== 'admin') {
         // Redirect to login page (using cleaner path)
-        window.location.href = 'login';
+        window.location.href = 'login.html';
         return;
     }
 
@@ -572,7 +572,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAllRewards();
     loadAllTrainingVideos();
     loadScheduledTasks();
-    populateMemberSelect('scheduledTaskMember');
+    populateMemberSelect('scheduledTaskMember', true);
 
     // Setup forms
     setupTaskForm();
@@ -1267,7 +1267,14 @@ function renderTasksTable(tasks) {
             return '<tr><td colspan="7" style="text-align: center; padding: var(--spacing-lg); color: var(--text-secondary);">No tasks in this section.</td></tr>';
         }
         return taskList.map(task => {
-            const member = teamMembers.find(m => m.id === task.memberId);
+            let memberName = 'Unknown';
+            if (task.memberId === 'all') {
+                memberName = 'All Team Members';
+            } else {
+                const member = teamMembers.find(m => m.id === task.memberId);
+                memberName = member ? member.name : 'Unknown';
+            }
+            
             const status = String(task.status || '').trim();
             const rewardStatus = String(task.rewardStatus || '').trim();
             const hasProof = !!task.proofImage;
@@ -1675,7 +1682,7 @@ function renderTrainingTable(videos) {
 
 // Modal functions
 function showAddTaskModal() {
-    populateMemberSelect('taskMember');
+    populateMemberSelect('taskMember', true);
     document.getElementById('taskForm').reset();
     delete document.getElementById('taskForm').dataset.editId;
     setTaskModalLabels(false);
@@ -1683,7 +1690,7 @@ function showAddTaskModal() {
 }
 
 function showAddScheduleModal() {
-    populateMemberSelect('scheduleMember');
+    populateMemberSelect('scheduleMember', true);
     document.getElementById('scheduleForm').reset();
     delete document.getElementById('scheduleForm').dataset.editId;
     setScheduleModalLabels(false);
@@ -1714,12 +1721,20 @@ function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
 
-function populateMemberSelect(selectId) {
+function populateMemberSelect(selectId, includeAll = false) {
     const select = document.getElementById(selectId);
     if (!select) return;
     const members = getAllTeamMembers();
+    
+    let options = [];
+    if (includeAll) {
+        options.push('<option value="all">All Team Members</option>');
+    }
+    
+    options = options.concat(members.map(m => `<option value="${m.id}">${m.name} - ${m.position}</option>`));
+    
     const placeholder = '<option value="">Select Team Member</option>';
-    select.innerHTML = placeholder + members.map(m => `<option value="${m.id}">${m.name} - ${m.position}</option>`).join('');
+    select.innerHTML = placeholder + options.join('');
 }
 
 function populateTrainingMemberSelect() {
@@ -1740,15 +1755,70 @@ function setupTaskForm() {
         const editId = form.dataset.editId;
         const nowIso = new Date().toISOString();
 
+        const title = document.getElementById('taskTitle').value;
+        const memberId = document.getElementById('taskMember').value;
+        const eventName = document.getElementById('taskEvent').value;
+        const description = document.getElementById('taskDescription').value;
+        const dueDate = document.getElementById('taskDueDate').value;
+        const status = document.getElementById('taskStatus').value;
+
         const next = {
-            title: document.getElementById('taskTitle').value,
-            memberId: document.getElementById('taskMember').value,
-            eventName: document.getElementById('taskEvent').value,
-            description: document.getElementById('taskDescription').value,
-            dueDate: document.getElementById('taskDueDate').value,
-            status: document.getElementById('taskStatus').value
+            title,
+            memberId,
+            eventName,
+            description,
+            dueDate,
+            status
         };
 
+        // HANDLE "ALL TEAM MEMBERS" (EXPLOSION)
+        if (memberId === 'all') {
+            const confirmAll = confirm('You are assigning this task to ALL team members. This will create individual tasks for each member. Continue?');
+            if (!confirmAll) return;
+
+            // If editing, delete the original first (if it existed)
+            if (editId) {
+                try {
+                    const encoded = encodeURIComponent(editId);
+                    await deleteRemote(`/team_tasks?id=${encoded}`);
+                    if (typeof deleteRewardRemoteByTask === 'function') {
+                        await deleteRewardRemoteByTask(editId);
+                    }
+                } catch (e) {
+                    console.error('Error deleting original task during conversion:', e);
+                }
+            }
+
+            const members = getAllTeamMembers();
+            let createdCount = 0;
+
+            for (const member of members) {
+                const task = {
+                    id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    ...next,
+                    memberId: member.id,
+                    createdAt: nowIso
+                };
+                
+                await saveTaskRemote(task);
+                // Optional: Notify individually (might be spammy if too many, but safe for small teams)
+                // notifyTeam(member.id, formatTaskSms(task, 'Created'), { kind: 'task', action: 'created', id: task.id });
+                createdCount++;
+            }
+
+            // Notify via "all" channel if needed, or just alert
+            notifyTeam('all', `New Team Task: ${title}`, { kind: 'task', action: 'created_batch', count: createdCount });
+            
+            alert(`Successfully assigned task to ${createdCount} members.`);
+            closeModal('taskModal');
+            loadAllTasks();
+            form.reset();
+            delete form.dataset.editId;
+            setTaskModalLabels(false);
+            return;
+        }
+
+        // INDIVIDUAL ASSIGNMENT (Existing Logic)
         if (editId) {
             const taskToUpdate = adminTasks.find(t => t.id === editId);
             if (taskToUpdate) {
@@ -1839,15 +1909,63 @@ function setupRewardForm() {
         const editId = form.dataset.editId;
         const nowIso = new Date().toISOString();
 
+        const title = document.getElementById('rewardTitle').value;
+        const memberId = document.getElementById('rewardMember').value;
+        const eventName = document.getElementById('rewardEvent').value;
+        const amount = parseFloat(document.getElementById('rewardAmount').value);
+        const date = document.getElementById('rewardDate').value;
+        const description = document.getElementById('rewardDescription').value || '';
+
         const next = {
-            title: document.getElementById('rewardTitle').value,
-            memberId: document.getElementById('rewardMember').value,
-            eventName: document.getElementById('rewardEvent').value,
-            amount: parseFloat(document.getElementById('rewardAmount').value),
-            date: document.getElementById('rewardDate').value,
-            description: document.getElementById('rewardDescription').value || ''
+            title,
+            memberId,
+            eventName,
+            amount,
+            date,
+            description
         };
 
+        // HANDLE "ALL TEAM MEMBERS" (EXPLOSION)
+        if (memberId === 'all') {
+            const confirmAll = confirm('You are assigning this reward to ALL team members. This will create individual reward records for each member. Continue?');
+            if (!confirmAll) return;
+
+            // If editing, delete the original first
+            if (editId) {
+                try {
+                    await deleteRemote(`/team_rewards?id=${encodeURIComponent(editId)}`);
+                } catch (e) {
+                    console.error('Error deleting original reward during conversion:', e);
+                }
+            }
+
+            const members = getAllTeamMembers();
+            let createdCount = 0;
+
+            for (const member of members) {
+                const reward = {
+                    id: 'reward_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    ...next,
+                    memberId: member.id,
+                    createdAt: nowIso
+                };
+                
+                await saveRewardRemote(reward);
+                createdCount++;
+            }
+
+            notifyTeam('all', `New Reward: ${title}`, { kind: 'reward', action: 'created_batch', count: createdCount });
+            
+            alert(`Successfully assigned reward to ${createdCount} members.`);
+            closeModal('rewardModal');
+            loadAllRewards();
+            form.reset();
+            delete form.dataset.editId;
+            setRewardModalLabels(false);
+            return;
+        }
+
+        // INDIVIDUAL ASSIGNMENT (Existing Logic)
         if (editId) {
             const rewardToUpdate = adminRewards.find(r => r.id === editId);
             if (rewardToUpdate) {
@@ -2081,7 +2199,7 @@ function editSchedule(scheduleId) {
         return;
     }
 
-    populateMemberSelect('scheduleMember');
+    populateMemberSelect('scheduleMember', true);
 
     const form = document.getElementById('scheduleForm');
     form.dataset.editId = scheduleId;

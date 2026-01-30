@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const user = getCurrentUser();
     if (!user || user.role !== 'team') {
         // Redirect to login page (using cleaner path)
-        window.location.href = 'login';
+        window.location.href = 'login.html';
         return;
     }
 

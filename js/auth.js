@@ -304,13 +304,13 @@ function logout() {
 
     // Redirect to the login page of the current portal
     if (path.includes('/dashboard/admin/')) {
-        window.location.href = 'login';
+        window.location.href = 'login.html';
     } else if (path.includes('/dashboard/team/')) {
-        window.location.href = 'login';
+        window.location.href = 'login.html';
     } else if (path.includes('/dashboard/user/')) {
-        window.location.href = 'login';
+        window.location.href = 'login.html';
     } else if (path.includes('/dashboard/')) {
-        window.location.href = 'login';
+        window.location.href = 'login.html';
     } else {
         window.location.href = 'index.html';
     }
@@ -322,7 +322,7 @@ function requireAuth(requiredRole = null) {
     
     if (!user) {
         // Redirect to login page
-        window.location.href = 'login';
+        window.location.href = 'login.html';
         return false;
     }
 
@@ -340,7 +340,7 @@ function requireAuth(requiredRole = null) {
 
     if (user.role === 'admin' && requireAdmin2fa && !isAdmin2faVerified()) {
         clearSessionStorage();
-        window.location.href = 'login';
+        window.location.href = 'login.html';
         return false;
     }
     
