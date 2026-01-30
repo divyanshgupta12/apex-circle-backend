@@ -2,6 +2,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { URLSearchParams } = require('url');
 
 process.on('uncaughtException', (err) => {
@@ -16,6 +17,7 @@ const PORT = 8002;
 const TASKS_FILE = path.join(__dirname, 'team_tasks.json');
 const REWARDS_FILE = path.join(__dirname, 'team_rewards.json');
 const SCHEDULED_TASKS_FILE = path.join(__dirname, 'team_scheduled_tasks.json');
+const TRAINING_VIDEOS_FILE = path.join(__dirname, 'team_training_videos.json');
 
 const NEON_API_URL = process.env.NEON_API_URL || 'https://ep-lively-union-ae21qnok.apirest.c-2.us-east-2.aws.neon.tech/neondb/rest/v1';
 const NEON_API_KEY = process.env.NEON_API_KEY;
@@ -79,7 +81,7 @@ function readJson(req) {
         let body = '';
         req.on('data', chunk => {
             body += chunk;
-            if (body.length > 1_000_000) {
+            if (body.length > 50_000_000) {
                 reject(new Error('Body too large'));
                 try { req.destroy(); } catch {}
             }
@@ -395,81 +397,136 @@ async function sendSmsInternal(to, message) {
     return sendViaTwilio({ to, message: msg });
 }
 
+// Canonical Team Members List
+const teamMembers = [
+    { id: 'tm001', name: 'Mr. Divyansh Gupta', email: 'divyansh.gupta@apexcircle.com', position: 'Team Leader' },
+    { id: 'tm002', name: 'Anurag Sangar', email: 'anurag.sangar@apexcircle.com', position: 'Registration Management' },
+    { id: 'tm003', name: 'Miss Palak', email: 'palak@apexcircle.com', position: 'Guest Management' },
+    { id: 'tm004', name: 'Aman Yadav', email: 'aman.yadav@apexcircle.com', position: 'Social Media & PR' },
+    { id: 'tm005', name: 'Aarti Yadav', email: 'aarti.yadav@apexcircle.com', position: 'Host & Anchor' },
+    { id: 'tm006', name: 'Prince Jangra', email: 'prince.jangra@apexcircle.com', position: 'Event Coordinator' },
+    { id: 'tm007', name: 'Naman Singh', email: 'naman.singh@apexcircle.com', position: 'Social Media & PR' },
+    { id: 'tm008', name: 'Drishti Pathak', email: 'drishti.pathak@apexcircle.com', position: 'Creative Team Head' },
+    { id: 'tm009', name: 'Deepti', email: 'deepti@apexcircle.com', position: 'Stage Coordinator' }
+];
+
 async function processScheduledTasks() {
     try {
         const now = new Date();
         const nowIso = now.toISOString();
-        let tasksToProcess = [];
+        const todayStr = nowIso.split('T')[0];
+        const dayOfWeek = now.getDay(); // 0=Sun
 
-        // 1. Fetch pending tasks
+        let schedules = [];
+        
+        // 1. Fetch Schedules
         if (NEON_API_KEY) {
-             const resp = await neonRequest('GET', '/team_scheduled_tasks?status=eq.pending');
+             const resp = await neonRequest('GET', '/team_scheduled_tasks');
              if (resp.ok && Array.isArray(resp.data)) {
-                 tasksToProcess = resp.data.filter(t => t.scheduledAt <= nowIso);
+                 schedules = resp.data;
              }
         } else {
              if (fs.existsSync(SCHEDULED_TASKS_FILE)) {
                  const raw = fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8');
-                 const list = JSON.parse(raw || '[]');
-                 tasksToProcess = list.filter(t => t.status === 'pending' && t.scheduledAt <= nowIso);
+                 schedules = JSON.parse(raw || '[]');
              }
         }
 
-        if (!tasksToProcess.length) return;
-        console.log(`Processing ${tasksToProcess.length} scheduled tasks...`);
+        if (!schedules.length) return;
+        let creations = 0;
 
-        for (const sTask of tasksToProcess) {
-            // Create the real task
-            const newTask = {
-                id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                title: sTask.title,
-                memberId: sTask.memberId,
-                eventName: sTask.eventName,
-                description: sTask.description,
-                dueDate: sTask.dueDate,
-                status: 'pending',
-                createdAt: nowIso,
-                updatedAt: nowIso,
-                rewardAmount: sTask.rewardAmount
-            };
+        for (const sch of schedules) {
+            if (sch.isActive === false) continue;
+            // Check if already generated today
+            if (sch.lastGenerated === todayStr) continue; 
 
-            let saveSuccess = false;
+            let shouldGenerate = false;
+            let taskTitle = sch.title;
+            let taskDesc = sch.description;
 
-            // Save Task
-            if (NEON_API_KEY) {
-                const save = await neonRequest('POST', '/team_tasks', newTask);
-                saveSuccess = save.ok;
-            } else {
-                let list = [];
-                if (fs.existsSync(TASKS_FILE)) {
-                    list = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8') || '[]');
+            // Determine if we should generate based on recurrence
+            if (sch.recurrence === 'weekly-mon-fri') {
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    shouldGenerate = true;
+                    // Daily Variations logic if needed
+                    if (sch.dailyVariations && sch.dailyVariations[dayOfWeek]) {
+                        taskTitle = sch.dailyVariations[dayOfWeek].title || taskTitle;
+                        taskDesc = sch.dailyVariations[dayOfWeek].description || taskDesc;
+                    }
                 }
-                list.push(newTask);
-                fs.writeFileSync(TASKS_FILE, JSON.stringify(list));
-                saveSuccess = true;
+            } else if (sch.recurrence === 'daily') {
+                shouldGenerate = true;
+            } else if (sch.recurrence === 'one-time' && sch.scheduledAt) {
+                // Legacy support for one-time scheduled tasks
+                const scheduledDate = new Date(sch.scheduledAt).toISOString().split('T')[0];
+                if (scheduledDate <= todayStr && sch.status === 'pending') {
+                    shouldGenerate = true;
+                }
             }
 
-            if (saveSuccess) {
-                // Update Scheduled Task Status
-                if (NEON_API_KEY) {
-                    await neonRequest('PATCH', `/team_scheduled_tasks?id=eq.${sTask.id}`, { status: 'completed', processedAt: nowIso });
-                } else {
-                    let list = JSON.parse(fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8') || '[]');
-                    const idx = list.findIndex(t => t.id === sTask.id);
-                    if (idx !== -1) {
-                        list[idx].status = 'completed';
-                        list[idx].processedAt = nowIso;
-                        fs.writeFileSync(SCHEDULED_TASKS_FILE, JSON.stringify(list));
+            if (shouldGenerate) {
+                console.log(`Generating tasks for schedule: ${sch.title}`);
+                // Generate Task
+                const members = sch.memberId === 'all' ? teamMembers : [teamMembers.find(m => m.id === sch.memberId)].filter(Boolean);
+                
+                for (const member of members) {
+                    const newTask = {
+                        id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                        title: taskTitle,
+                        description: taskDesc,
+                        memberId: member.id,
+                        eventName: sch.eventName,
+                        dueDate: sch.recurrence === 'one-time' && sch.dueDate ? sch.dueDate : todayStr,
+                        status: 'pending',
+                        createdAt: nowIso,
+                        updatedAt: nowIso,
+                        originScheduleId: sch.id,
+                        autoExtend: sch.autoExtend || false,
+                        rewardAmount: sch.rewardAmount
+                    };
+
+                    // Save Task
+                    if (NEON_API_KEY) {
+                        await neonRequest('POST', '/team_tasks', newTask);
+                    } else {
+                        let list = [];
+                        if (fs.existsSync(TASKS_FILE)) {
+                            list = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8') || '[]');
+                        }
+                        list.push(newTask);
+                        fs.writeFileSync(TASKS_FILE, JSON.stringify(list));
+                    }
+                    creations++;
+                    
+                    // Send SMS (Optional)
+                    if (member.phone || sch.memberPhone) {
+                         const phone = member.phone || sch.memberPhone;
+                         // const smsBody = `New Task: ${newTask.title}\nCheck Team Portal.`;
+                         // await sendSmsInternal(phone, smsBody);
                     }
                 }
 
-                // Send SMS
-                if (sTask.memberPhone) {
-                    const smsBody = `New Task Assigned: ${newTask.title}\nDue: ${newTask.dueDate || 'No Date'}\nCheck Team Portal for details.`;
-                    await sendSmsInternal(sTask.memberPhone, smsBody);
+                // Update Schedule lastGenerated (and status if one-time)
+                const updateData = { lastGenerated: todayStr };
+                if (sch.recurrence === 'one-time') updateData.status = 'completed';
+
+                if (NEON_API_KEY) {
+                    await neonRequest('PATCH', `/team_scheduled_tasks?id=eq.${sch.id}`, updateData);
+                } else {
+                    let list = JSON.parse(fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8') || '[]');
+                    const idx = list.findIndex(t => t.id === sch.id);
+                    if (idx !== -1) {
+                        list[idx] = { ...list[idx], ...updateData };
+                        fs.writeFileSync(SCHEDULED_TASKS_FILE, JSON.stringify(list));
+                    }
                 }
             }
         }
+        
+        if (creations > 0) {
+            console.log(`Generated ${creations} tasks from schedules.`);
+        }
+
     } catch (e) {
         console.error('Error processing scheduled tasks:', e);
     }
@@ -536,7 +593,7 @@ http.createServer(async (req, res) => {
     if (req.method === 'GET' && u.pathname === '/api/team_tasks') {
         try {
             if (NEON_API_KEY) {
-                const resp = await neonRequest('GET', '/team_tasks');
+                const resp = await neonRequest('GET', '/team_tasks' + (u.search || ''));
                 return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, tasks: Array.isArray(resp.data) ? resp.data : [] });
             }
             let list = [];
@@ -555,7 +612,7 @@ http.createServer(async (req, res) => {
     if (req.method === 'GET' && u.pathname === '/api/scheduled_tasks') {
         try {
             if (NEON_API_KEY) {
-                const resp = await neonRequest('GET', '/team_scheduled_tasks');
+                const resp = await neonRequest('GET', '/team_scheduled_tasks' + (u.search || ''));
                 return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, tasks: Array.isArray(resp.data) ? resp.data : [] });
             }
             let list = [];
@@ -735,7 +792,7 @@ http.createServer(async (req, res) => {
     if (req.method === 'GET' && u.pathname === '/api/team_rewards') {
         try {
             if (NEON_API_KEY) {
-                const resp = await neonRequest('GET', '/team_rewards');
+                const resp = await neonRequest('GET', '/team_rewards' + (u.search || ''));
                 return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, rewards: Array.isArray(resp.data) ? resp.data : [] });
             }
             let list = [];
@@ -825,6 +882,88 @@ http.createServer(async (req, res) => {
         }
     }
 
+    if (req.method === 'GET' && u.pathname === '/api/team_training_videos') {
+        try {
+            if (NEON_API_KEY) {
+                const resp = await neonRequest('GET', '/team_training_videos' + (u.search || ''));
+                return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, videos: Array.isArray(resp.data) ? resp.data : [] });
+            }
+            let list = [];
+            if (fs.existsSync(TRAINING_VIDEOS_FILE)) {
+                const raw = fs.readFileSync(TRAINING_VIDEOS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            return sendJson(res, 200, { ok: true, videos: list });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (req.method === 'POST' && u.pathname === '/api/team_training_videos') {
+        try {
+            const body = await readJson(req);
+            if (NEON_API_KEY) {
+                if (!body.id) throw new Error('Video ID required');
+                const check = await neonRequest('GET', `/team_training_videos?id=eq.${body.id}`);
+                const exists = check.ok && Array.isArray(check.data) && check.data.length > 0;
+                const method = exists ? 'PATCH' : 'POST';
+                const endpoint = exists ? `/team_training_videos?id=eq.${body.id}` : '/team_training_videos';
+                const save = await neonRequest(method, endpoint, body);
+                return sendJson(res, save.ok ? 200 : 500, { ok: save.ok, video: Array.isArray(save.data) ? save.data[0] : save.data });
+            }
+
+            const next = body && typeof body === 'object' ? body : {};
+            let list = [];
+            if (fs.existsSync(TRAINING_VIDEOS_FILE)) {
+                const raw = fs.readFileSync(TRAINING_VIDEOS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            const id = String(next.id || '').trim() || ('video_' + Date.now());
+            const nowIso = new Date().toISOString();
+            const idx = list.findIndex(v => String(v && v.id) === id);
+            const payload = {
+                ...list[idx] || {},
+                ...next,
+                id,
+                updatedAt: nowIso,
+                createdAt: list[idx] && list[idx].createdAt ? list[idx].createdAt : (next.createdAt || nowIso)
+            };
+            if (idx === -1) list.push(payload);
+            else list[idx] = payload;
+            fs.writeFileSync(TRAINING_VIDEOS_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true, video: payload });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (req.method === 'DELETE' && u.pathname === '/api/team_training_videos') {
+        try {
+            const id = u.searchParams.get('id');
+            if (!id) return sendJson(res, 400, { ok: false, error: 'Missing query: provide id' });
+
+            if (NEON_API_KEY) {
+                const endpoint = `/team_training_videos?id=eq.${encodeURIComponent(id)}`;
+                const del = await neonRequest('DELETE', endpoint);
+                return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
+            }
+
+            let list = [];
+            if (fs.existsSync(TRAINING_VIDEOS_FILE)) {
+                const raw = fs.readFileSync(TRAINING_VIDEOS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            list = list.filter(v => String(v && v.id) !== String(id));
+            fs.writeFileSync(TRAINING_VIDEOS_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
     // Static File Serving
     let filePath = '.' + u.pathname;
     if (filePath.endsWith('/')) {
@@ -874,6 +1013,16 @@ http.createServer(async (req, res) => {
         file.pipe(res);
     });
 
-}).listen(PORT);
-
-console.log(`Server running at http://localhost:${PORT}/`);
+}).listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running at http://localhost:${PORT}/`);
+    
+    // Log LAN IP
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                console.log(`Network URL: http://${iface.address}:${PORT}/`);
+            }
+        }
+    }
+});
