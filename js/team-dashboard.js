@@ -54,6 +54,8 @@ document.addEventListener('DOMContentLoaded', function() {
     syncNow();
     updateLastSyncLabel();
 
+    // Logout button handler is already attached in auth.js
+    /* 
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function(e) {
@@ -61,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
             logout();
         });
     }
+    */
 
     // Sync every 10 seconds for "live" updates
     setInterval(function () {

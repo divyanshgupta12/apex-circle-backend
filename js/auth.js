@@ -303,12 +303,16 @@ function logout() {
     const path = (window.location.pathname || '').toLowerCase();
 
     // Redirect to the login page of the current portal
-    if (path.includes('/dashboard/admin/')) {
-        window.location.href = 'login.html';
-    } else if (path.includes('/dashboard/team/')) {
-        window.location.href = 'login.html';
-    } else if (path.includes('/dashboard/user/')) {
-        window.location.href = 'login.html';
+    if (path.includes('/dashboard/admin')) {
+        // If we are deep in admin or at root of admin
+        const isDir = path.endsWith('/') || path.includes('/dashboard/admin/');
+        window.location.href = isDir ? 'login.html' : 'admin/login.html';
+    } else if (path.includes('/dashboard/team')) {
+        const isDir = path.endsWith('/') || path.includes('/dashboard/team/');
+        window.location.href = isDir ? 'login.html' : 'team/login.html';
+    } else if (path.includes('/dashboard/user')) {
+        const isDir = path.endsWith('/') || path.includes('/dashboard/user/');
+        window.location.href = isDir ? 'login.html' : 'user/login.html';
     } else if (path.includes('/dashboard/')) {
         window.location.href = 'login.html';
     } else {
