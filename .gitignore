@@ -1,0 +1,7 @@
+node_modules
+.env
+.DS_Store
+db_log.txt
+api_result.txt
+debug_output.txt
+npm-debug.log

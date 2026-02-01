@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "id": "rew_001",
+    "memberId": "tm006",
+    "amount": 500,
+    "reason": "Excellent coordination in National Day Parade",
+    "taskId": "task_1768451239256",
+    "createdAt": "2026-01-20T10:00:00.000Z"
+  },
+  {
+    "id": "rew_002",
+    "memberId": "tm001",
+    "amount": 1000,
+    "reason": "Leadership bonus for Q1",
+    "taskId": null,
+    "createdAt": "2026-01-15T09:00:00.000Z"
+  },
+  {
+    "id": "rew_003",
+    "memberId": "tm008",
+    "amount": 300,
+    "reason": "Creative design for brochure",
+    "taskId": null,
+    "createdAt": "2026-01-18T14:30:00.000Z"
+  }
+]

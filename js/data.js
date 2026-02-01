@@ -52,6 +52,13 @@ const adminDashboardData = {
     analytics: { monthlyRevenue: [], eventTypes: [] }
 };
 
+// Ensure global access for browser
+if (typeof window !== 'undefined') {
+    window.teamMembers = teamMembers;
+    window.userDashboardData = userDashboardData;
+    window.adminDashboardData = adminDashboardData;
+}
+
 // Export data for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { userDashboardData, adminDashboardData, teamMembers };

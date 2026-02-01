@@ -14,9 +14,9 @@
   "author": "The Apex Circle",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "pg": "^8.11.3"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=14.0.0"
   }

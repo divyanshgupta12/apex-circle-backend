@@ -1,0 +1,9 @@
+[
+  {
+    "id": "notif_001",
+    "message": "Welcome to the new dashboard!",
+    "createdAt": "2026-02-01T09:00:00Z",
+    "read": false,
+    "memberId": "all"
+  }
+]

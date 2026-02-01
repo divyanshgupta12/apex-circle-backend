@@ -115,7 +115,26 @@
                     <span class="sidebar-menu-icon">🏠</span>
                     <span>Dashboard</span>
                 </a></li>
-                <li><a href="#" onclick="openSyncSettings(); return false;">
+                <!-- 
+                <li><a href="../../gallery.html">
+                    <span class="sidebar-menu-icon">🖼️</span>
+                    <span>Gallery</span>
+                </a></li>
+                -->
+                <!--
+                <li><a href="../../team.html">
+                    <span class="sidebar-menu-icon">👥</span>
+                    <span>Team Portal</span>
+                </a></li>
+                -->
+                <!-- Admin Portal hidden for Team Members -->
+                <!--
+                <li><a href="../admin/index.html">
+                    <span class="sidebar-menu-icon">🔐</span>
+                    <span>Admin Portal</span>
+                </a></li>
+                -->
+                <li><a href="#" id="btnOpenSyncSettings" onclick="openSyncSettings(); return false;">
                     <span class="sidebar-menu-icon">⚙️</span>
                     <span>Sync Settings</span>
                 </a></li>
@@ -158,12 +177,12 @@
 
             <!-- Tabs -->
             <div class="tabs">
-                <button class="tab active" data-tab="leaderboard">🏠 Home</button>
-                <button class="tab" data-tab="tasks">📋 My Tasks</button>
-                <button class="tab" data-tab="schedule">📅 Event Schedule</button>
-                <button class="tab" data-tab="rewards">🎁 My Rewards</button>
-                <button class="tab" data-tab="training">🎥 Training</button>
-                <button class="tab" data-tab="updates">📣 Portal Updates</button>
+                <button class="tab active" data-tab="leaderboard" onclick="switchTab('leaderboard')">🏠 Home</button>
+                <button class="tab" data-tab="tasks" onclick="switchTab('tasks')">📋 My Tasks</button>
+                <button class="tab" data-tab="schedule" onclick="switchTab('schedule')">📅 Event Schedule</button>
+                <button class="tab" data-tab="rewards" onclick="switchTab('rewards')">🎁 My Rewards</button>
+                <button class="tab" data-tab="training" onclick="switchTab('training')">🎥 Training</button>
+                <button class="tab" data-tab="updates" onclick="switchTab('updates')">📣 Portal Updates</button>
             </div>
 
             <!-- Leaderboard Tab (Home) -->
@@ -319,7 +338,7 @@
     <script src="../../js/api-config.js?v=3"></script>
     <script src="../../js/data.js?v=3"></script>
     <script src="../../js/auth.js?v=3"></script>
-    <script src="../../js/team-dashboard.js?v=3"></script>
+    <script src="../../js/team-dashboard.js?v=7"></script>
     <script>
         // Fallback debug and data population
         window.addEventListener('load', function() {

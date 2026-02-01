@@ -1,0 +1,10 @@
+[
+  {
+    "id": "evt_001",
+    "title": "Team Meeting",
+    "date": "2026-02-05",
+    "description": "Weekly sync up",
+    "type": "meeting",
+    "createdAt": "2026-02-01T10:00:00Z"
+  }
+]

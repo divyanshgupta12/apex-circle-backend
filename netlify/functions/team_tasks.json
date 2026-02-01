@@ -9,5 +9,16 @@
     "status": "pending",
     "createdAt": "2026-01-15T04:27:19.256Z",
     "updatedAt": "2026-01-16T05:29:20.861Z"
+  },
+  {
+    "id": "task_debug_tm001",
+    "title": "Welcome Team Leader",
+    "memberId": "tm001",
+    "eventName": "System Check",
+    "description": "This is a test task to confirm your portal is working.",
+    "dueDate": "2026-01-30",
+    "status": "pending",
+    "createdAt": "2026-01-30T10:00:00.000Z",
+    "updatedAt": "2026-01-30T10:00:00.000Z"
   }
 ]

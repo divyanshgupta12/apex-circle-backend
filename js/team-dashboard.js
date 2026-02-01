@@ -6,7 +6,7 @@
 
 // Initialize team dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    const user = getCurrentUser();
+    const user = getDashboardUser();
     if (!user || user.role !== 'team') {
         // Redirect to login page (using cleaner path)
         window.location.href = 'login.html';
@@ -81,7 +81,7 @@ let mem_notifications_seen = new Set();
 let currentProofTaskId = null;
 
 // Helper to get current user safely
-function getCurrentUser() {
+function getDashboardUser() {
     // 1. Try global auth.js function first (if available)
     let user = null;
     if (typeof window.getCurrentUser === 'function') {
@@ -94,19 +94,44 @@ function getCurrentUser() {
         } catch { user = null; }
     }
 
-    // 3. Robustness: Polyfill ID if missing (fix for cached sessions without ID)
-    if (user && !user.id && typeof teamMembers !== 'undefined') {
-        const found = teamMembers.find(m => m.username === user.username || m.email === user.username);
+    // 3. Hydrate with teamMembers data (CRITICAL FIX for missing name/photo)
+    const members = (typeof window.teamMembers !== 'undefined' ? window.teamMembers : (typeof teamMembers !== 'undefined' ? teamMembers : []));
+    
+    if (user && Array.isArray(members)) {
+        // Find by ID first, then username/email
+        const found = members.find(m => 
+            (user.id && m.id === user.id) || 
+            (m.username === user.username) || 
+            (m.email === user.username) ||
+            (m.email === user.email)
+        );
+
         if (found) {
-             user.id = found.id;
-             console.log('Polyfilled user ID:', user.id);
+            // Merge found data into user object
+            if (!user.id) user.id = found.id;
+            if (!user.name) user.name = found.name;
+            if (!user.position) user.position = found.position;
+            if (!user.profilePhoto) user.profilePhoto = found.profilePhoto;
+            if (!user.phone) user.phone = found.phone;
+            
+            console.log('Hydrated user data from teamMembers:', user);
         }
     }
-    
+
     // 4. Demo Fallback: If still no ID but is team role, default to 'tm001' for demo
     if (user && !user.id && user.role === 'team') {
          console.warn('User ID still missing. Defaulting to tm001 for demo.');
          user.id = 'tm001';
+         
+         // Also try to find tm001 details if available
+         if (Array.isArray(members)) {
+             const demo = members.find(m => m.id === 'tm001');
+             if (demo) {
+                 user.name = demo.name;
+                 user.position = demo.position;
+                 user.profilePhoto = demo.profilePhoto;
+             }
+         }
     }
 
     return user;
@@ -123,7 +148,7 @@ function updateLastSyncLabel() {
 }
 
 function syncNow() {
-    const user = getCurrentUser();
+    const user = getDashboardUser();
     if (!user || user.role !== 'team') return;
     loadTasks();
     loadSchedule();
@@ -143,6 +168,11 @@ function getApiBase() {
     const override = sessionStorage.getItem('apex_api_base');
     if (override) return override;
 
+    // Auto-detect localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8002';
+    }
+
     return '/.netlify/functions';
 }
 
@@ -156,9 +186,14 @@ async function fetchRemote(endpoint) {
 
     try {
         let ep = endpoint;
-        // Fix for potentially different endpoint naming conventions if needed
-        if (ep.startsWith('/team_scheduled_tasks')) {
-            // Mapping check if backend uses different table name
+        // Fix for double /api prefix if base already includes it
+        if (ep.startsWith('/api/') && (base.endsWith('/api') || base.endsWith('/api/'))) {
+            ep = ep.substring(4);
+        }
+        
+        // Ensure ep starts with / if base doesn't end with it
+        if (!ep.startsWith('/') && !base.endsWith('/')) {
+            ep = '/' + ep;
         }
         
         // Add timestamp to prevent caching
@@ -166,21 +201,22 @@ async function fetchRemote(endpoint) {
         const url = `${base}${ep}${sep}t=${Date.now()}`;
         
         const headers = {};
-        const apiKey = getNeonApiKey();
-        if (apiKey) {
-            headers['Authorization'] = `Bearer ${apiKey}`;
-        }
-
         const resp = await fetch(url, { headers });
-        if (!resp.ok) return null;
+        if (!resp.ok) {
+            console.error(`Fetch ${url} failed with status: ${resp.status}`);
+            return null;
+        }
         const data = await resp.json();
         
-        // Handle various response structures
+        // Handle various response structures from server.js
         if (data && typeof data === 'object') {
             if (Array.isArray(data)) return data;
             if (data.tasks && Array.isArray(data.tasks)) return data.tasks;
             if (data.rewards && Array.isArray(data.rewards)) return data.rewards;
-            if (data.ok && Array.isArray(data.tasks)) return data.tasks; // Handle {ok:true, tasks:[]} format
+            if (data.videos && Array.isArray(data.videos)) return data.videos;
+            if (data.updates && Array.isArray(data.updates)) return data.updates;
+            if (data.notifications && Array.isArray(data.notifications)) return data.notifications;
+            if (data.rows && Array.isArray(data.rows)) return data.rows; // DB query fallback
         }
         return [];
     } catch (e) {
@@ -215,8 +251,8 @@ async function saveRemote(endpoint, data) {
 function fetchMemberTasks(memberId) {
     const id = String(memberId || '').trim();
     const endpoint = id 
-        ? `/team_tasks?or=(memberId.eq.${encodeURIComponent(id)},memberId.eq.all)`
-        : '/team_tasks';
+        ? `/api/team_tasks?or=(memberId.eq.${encodeURIComponent(id)},memberId.eq.all)`
+        : '/api/team_tasks';
         
     return fetchRemote(endpoint).then(tasks => {
         if (!Array.isArray(tasks)) return [];
@@ -231,8 +267,8 @@ function fetchMemberTasks(memberId) {
 function fetchMemberSchedule(memberId) {
     const id = String(memberId || '').trim();
     const endpoint = id
-        ? `/team_schedule?or=(memberId.eq.${encodeURIComponent(id)},memberId.eq.all)`
-        : '/team_schedule';
+        ? `/api/scheduled_tasks?or=(memberId.eq.${encodeURIComponent(id)},memberId.eq.all)`
+        : `/api/scheduled_tasks`;
     return fetchRemote(endpoint).then(data => {
         if (!Array.isArray(data)) return [];
         return data.filter(s => String(s.memberId) === String(id) || String(s.memberId) === 'all');
@@ -245,8 +281,8 @@ function fetchMemberSchedule(memberId) {
 function fetchMemberRewards(memberId) {
     const id = String(memberId || '').trim();
     const endpoint = id
-        ? `/team_rewards?memberId=eq.${encodeURIComponent(id)}`
-        : '/team_rewards';
+        ? `/api/team_rewards?memberId=eq.${encodeURIComponent(id)}`
+        : '/api/team_rewards';
     return fetchRemote(endpoint).then(data => {
         if (!Array.isArray(data)) return [];
         return data.filter(r => String(r && r.memberId) === String(id));
@@ -257,34 +293,57 @@ function fetchMemberRewards(memberId) {
 }
 
 function saveTaskRemote(task) {
-    return saveRemote('/team_tasks', task);
+    return saveRemote('/api/team_tasks', task);
 }
 
 window.openSyncSettings = function() {
-    // alert('Sync settings are now managed centrally.');
-    console.log('Sync settings clicked - managed centrally');
-    const btn = document.querySelector('a[onclick="openSyncSettings()"]');
-    if (btn) {
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-check"></i> Auto-Sync On';
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-        }, 2000);
+    const modal = document.getElementById('syncSettingsModal');
+    if (modal) {
+        // Default to Render URL if not set
+        const defaultUrl = (window.APEX_CONFIG && window.APEX_CONFIG.API_BASE_URL) 
+            ? window.APEX_CONFIG.API_BASE_URL 
+            : 'https://apex-circle-backend.onrender.com/api';
+            
+        document.getElementById('syncApiUrl').value = sessionStorage.getItem('apex_api_base') || defaultUrl;
+        document.getElementById('syncApiKey').value = sessionStorage.getItem('apex_neon_key') || '';
+        modal.style.display = 'block';
     }
 };
 
 window.saveSyncSettings = function() {
-    console.log('Save sync settings - managed centrally');
+    const url = document.getElementById('syncApiUrl').value.trim();
+    const key = document.getElementById('syncApiKey').value.trim();
+    
+    if (url) {
+        sessionStorage.setItem('apex_api_base', url);
+    } else {
+        sessionStorage.removeItem('apex_api_base');
+    }
+    
+    if (key) {
+        sessionStorage.setItem('apex_neon_key', key);
+    } else {
+        sessionStorage.removeItem('apex_neon_key');
+    }
+    
+    alert('Settings saved. Reloading...');
+    location.reload();
 };
 
-// Notifications (Memory Only)
+// Notifications
 function loadNotifications() {
-    const user = getCurrentUser();
+    const user = getDashboardUser();
     if (!user) return;
-    // We could fetch notifications from server if there was an endpoint
-    // For now, if no endpoint exists, we just clear/hide them or use memory list if pushed
-    // Assuming no persistence requested for notifications unless server supports it
-    renderNotifications(document.getElementById('teamNotifications'), Array.from(mem_notifications));
+    
+    fetchRemote('/api/team_notifications').then(list => {
+        const all = Array.isArray(list) ? list : [];
+        // Filter by user or 'all'
+        const myNotifs = all.filter(n => !n.memberId || n.memberId === 'all' || String(n.memberId) === String(user.id));
+        renderNotifications(document.getElementById('teamNotifications'), myNotifs);
+    }).catch(e => {
+        console.warn('Failed to load notifications:', e);
+        renderNotifications(document.getElementById('teamNotifications'), []);
+    });
 }
 
 function renderNotifications(container, list) {
@@ -364,19 +423,41 @@ function setupMobileSidebarToggle() {
     });
 }
 
-function initTabs() {
-    const tabs = document.querySelectorAll('.tab');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            const targetTab = this.getAttribute('data-tab');
-            tabs.forEach(t => t.classList.remove('active'));
-            tabContents.forEach(tc => tc.classList.remove('active'));
-            this.classList.add('active');
-            document.getElementById(targetTab + 'Tab').classList.add('active');
-        });
+// Expose functions for UI buttons
+window.switchTab = function(targetTab) {
+    console.log('Switching to tab:', targetTab);
+    
+    // 1. Deactivate all tabs
+    document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('active');
+        if (t.getAttribute('data-tab') === targetTab) {
+            t.classList.add('active');
+        }
     });
+    
+    // 2. Hide all contents
+    document.querySelectorAll('.tab-content').forEach(tc => {
+        tc.classList.remove('active');
+        tc.style.display = 'none';
+    });
+
+    // 3. Show target content
+    const targetEl = document.getElementById(targetTab + 'Tab');
+    if (targetEl) {
+        targetEl.classList.add('active');
+        targetEl.style.display = 'block';
+    } else {
+        console.error('Target tab content not found:', targetTab + 'Tab');
+    }
+};
+
+function initTabs() {
+    // Set initial state based on active tab in HTML
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab) {
+        const tabName = activeTab.getAttribute('data-tab');
+        window.switchTab(tabName);
+    }
 }
 
 // Auto-Eliminate Check
@@ -414,8 +495,8 @@ async function checkAndGenerateScheduledTasks(user, currentTasks) {
     // Fetch schedules remotely
     try {
         const endpoint = userId 
-            ? `/team_scheduled_tasks?or=(memberId.eq.${encodeURIComponent(userId)},memberId.eq.all)`
-            : '/team_scheduled_tasks';
+            ? `/api/scheduled_tasks?or=(memberId.eq.${encodeURIComponent(userId)},memberId.eq.all)`
+            : '/api/scheduled_tasks';
         const remote = await fetchRemote(endpoint);
         if (Array.isArray(remote)) schedules = remote;
     } catch (e) {
@@ -530,15 +611,14 @@ const FALLBACK_TASKS = [
 
 // Load Tasks
 function loadTasks() {
-    const user = getCurrentUser();
+    const user = getDashboardUser();
     if (!user || !user.id) return;
 
     fetchMemberTasks(user.id).then(async tasks => {
-        // Fallback if no tasks returned (Demo Mode)
+        // REMOVED Fallback Demo Data - Only show real tasks as requested
         if (!tasks || tasks.length === 0) {
-            console.log('No remote tasks found. Loading fallback demo data.');
-            // Assign fallback tasks to current user so they see something
-            tasks = FALLBACK_TASKS.map(t => ({ ...t, memberId: user.id }));
+            console.log('No remote tasks found.');
+            tasks = [];
         }
 
         mem_tasks = tasks; // Update memory
@@ -555,10 +635,9 @@ function loadTasks() {
         updateTaskStats(processed);
     }).catch((e) => {
         console.error("Error loading tasks:", e);
-        // On error, also try fallback
-        const fallback = FALLBACK_TASKS.map(t => ({ ...t, memberId: user.id }));
-        renderTasks(fallback);
-        updateTaskStats(fallback);
+        // On error, show empty state instead of fake data
+        renderTasks([]);
+        updateTaskStats([]);
     });
 }
 
@@ -631,7 +710,10 @@ function updateTaskStats(tasks) {
     const completed = tasks.filter(t => t.status === 'completed').length;
     const pending = tasks.filter(t => t.status === 'pending').length;
     
-    const elTotal = document.getElementById('statTotalTasks');
+    // Update HTML elements (IDs from index.html)
+    const elTotal = document.getElementById('totalTasks');
+    // HTML doesn't have dedicated counters for completed/pending in the header, 
+    // but we can update them if they existed or if we want to add them later.
     const elCompleted = document.getElementById('statCompletedTasks');
     const elPending = document.getElementById('statPendingTasks');
 
@@ -641,18 +723,18 @@ function updateTaskStats(tasks) {
 }
 
 // Task Proof Logic
-function setupTaskProofForm() {
-    window.openProofModal = function(taskId) {
-        currentProofTaskId = taskId;
-        const task = mem_tasks.find(t => t.id === taskId);
-        if (task) {
-            const titleEl = document.getElementById('taskProofTaskTitle');
-            if (titleEl) titleEl.textContent = task.title;
-        }
-        const modal = document.getElementById('taskProofModal');
-        if (modal) modal.style.display = 'block';
-    };
+window.openProofModal = function(taskId) {
+    currentProofTaskId = taskId;
+    const task = mem_tasks.find(t => t.id === taskId);
+    if (task) {
+        const titleEl = document.getElementById('taskProofTaskTitle');
+        if (titleEl) titleEl.textContent = task.title;
+    }
+    const modal = document.getElementById('taskProofModal');
+    if (modal) modal.style.display = 'block';
+};
 
+function setupTaskProofForm() {
     const closeBtns = document.querySelectorAll('.modal-close');
     closeBtns.forEach(btn => {
         btn.addEventListener('click', function() {
@@ -726,7 +808,7 @@ function setupTaskProofForm() {
 
 // Load Schedule
 function loadSchedule() {
-    const user = getCurrentUser();
+    const user = getDashboardUser();
     if (!user || !user.id) return;
 
     fetchMemberSchedule(user.id).then(schedule => {
@@ -759,7 +841,7 @@ function renderSchedule(schedule) {
 
 // Load Rewards
 function loadRewards() {
-    const user = getCurrentUser();
+    const user = getDashboardUser();
     if (!user || !user.id) return;
 
     fetchMemberRewards(user.id).then(rewards => {
@@ -769,37 +851,69 @@ function loadRewards() {
 }
 
 function renderRewards(rewards) {
-    const container = document.getElementById('rewardsList');
-    if (!container) return;
+    const containerToday = document.getElementById('rewardsListToday');
+    const containerPrevious = document.getElementById('rewardsListPrevious');
+    const containerGeneric = document.getElementById('rewardsList'); // Fallback
+
+    if (!containerToday && !containerPrevious && !containerGeneric) return;
 
     if (!rewards.length) {
-        container.innerHTML = '<p class="text-muted text-center">No rewards yet.</p>';
+        const msg = '<p class="text-muted text-center">No rewards yet.</p>';
+        if (containerToday) containerToday.innerHTML = msg;
+        if (containerPrevious) containerPrevious.innerHTML = '';
+        if (containerGeneric) containerGeneric.innerHTML = msg;
         return;
     }
 
-    const sorted = [...rewards].sort((a, b) => new Date(b.date) - new Date(a.date));
-    container.innerHTML = sorted.map(r => `
-        <div class="task-card" style="margin-bottom: var(--spacing-sm); display: flex; justify-content: space-between;">
+    const todayStr = new Date().toISOString().split('T')[0];
+    const today = rewards.filter(r => (r.date || r.createdAt || '').startsWith(todayStr));
+    const previous = rewards.filter(r => !(r.date || r.createdAt || '').startsWith(todayStr));
+
+    const renderItem = (r) => `
+        <div class="task-card" style="margin-bottom: var(--spacing-sm); display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <div style="font-weight: 600;">${r.title || 'Reward'}</div>
-                <div style="font-size: 0.85rem; color: gray;">${formatDate(r.date)}</div>
+                <div style="font-weight: 600;">${r.title || r.reason || 'Reward'}</div>
+                <div style="font-size: 0.85rem; color: gray;">${formatDate(r.date || r.createdAt)}</div>
+                ${r.taskId ? `<div style="font-size: 0.75rem; color: var(--primary-color);">Task ID: ${r.taskId}</div>` : ''}
             </div>
-            <div style="font-weight: bold; color: var(--success-color);">
+            <div style="font-weight: bold; color: var(--success-color); font-size: 1.1rem;">
                 +${r.amount || 0} pts
             </div>
         </div>
-    `).join('');
+    `;
+
+    if (containerToday) {
+        containerToday.innerHTML = today.length ? today.map(renderItem).join('') : '<p class="text-muted text-center">No rewards today.</p>';
+    }
+    if (containerPrevious) {
+        containerPrevious.innerHTML = previous.map(renderItem).join('');
+    }
+    if (containerGeneric && !containerToday && !containerPrevious) {
+        containerGeneric.innerHTML = rewards.map(renderItem).join('');
+    }
+
+    // Update Header Stats if elements exist
+    updateRewardStats(rewards);
+}
+
+function updateRewardStats(rewards) {
+    const totalPoints = rewards.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+    const elPoints = document.getElementById('totalPoints');
+    const elRewards = document.getElementById('totalRewards');
+
+    if (elPoints) elPoints.textContent = totalPoints.toLocaleString();
+    if (elRewards) elRewards.textContent = '₹' + totalPoints.toLocaleString();
 }
 
 // Load Training Videos
 async function loadTraining() {
-    const user = getCurrentUser();
+    const user = getDashboardUser();
     const userId = user && user.id ? String(user.id) : '';
 
     try {
         const endpoint = userId 
-            ? `/team_training_videos?or=(memberId.eq.${encodeURIComponent(userId)},memberId.eq.all)`
-            : '/team_training_videos';
+            ? `/api/team_training_videos?or=(memberId.eq.${encodeURIComponent(userId)},memberId.eq.all)`
+            : '/api/team_training_videos';
         
         const remoteVideos = await fetchRemote(endpoint);
         const videos = Array.isArray(remoteVideos) ? remoteVideos : [];
@@ -862,14 +976,14 @@ function getVideoEmbed(url) {
 }
 
 // Load Updates (Events)
-function loadUpdates() {
-    // Assuming events are stored in 'apex_client_events' remotely if possible, 
-    // or just skipping if no endpoint. For now, empty or memory only.
-    // If the user has a remote table for events, we should fetch it.
-    // Based on previous code, it used getEmailMap('apex_client_events').
-    // We will try to fetch '/user_events' or similar if available, or just skip.
-    // Given the instructions, we should not use localStorage.
-    renderTeamEvents([]); 
+async function loadUpdates() {
+    try {
+        const updates = await fetchRemote('/api/team_updates');
+        renderTeamEvents(Array.isArray(updates) ? updates : []);
+    } catch (e) {
+        console.warn('Failed to load updates:', e);
+        renderTeamEvents([]);
+    }
 }
 
 function renderTeamEvents(events) {
@@ -881,12 +995,20 @@ function renderTeamEvents(events) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center p-3 text-muted">No events found.</td></tr>';
         return;
     }
-    // Render logic if needed...
+
+    tbody.innerHTML = events.map(e => `
+        <tr>
+            <td>${formatDate(e.date)}</td>
+            <td style="font-weight: 500;">${e.title || 'Event'}</td>
+            <td>${e.description || ''}</td>
+            <td><span class="badge badge-primary" style="text-transform: capitalize;">${e.type || 'General'}</span></td>
+        </tr>
+    `).join('');
 }
 
 // Load Leaderboard
 function loadLeaderboard() {
-    fetchRemote('/team_rewards').then(rewards => {
+    fetchRemote('/api/team_rewards').then(rewards => {
         const all = Array.isArray(rewards) ? rewards : [];
         renderLeaderboard(all);
     }).catch(() => renderLeaderboard([]));
@@ -956,3 +1078,11 @@ function getTaskExtensionLabel(task) {
     return count > 0 ? ` (Ext: ${count})` : '';
 }
 
+// Expose functions for UI buttons
+window.refreshLeaderboard = loadLeaderboard;
+window.refreshTasks = loadTasks;
+window.refreshSchedule = loadSchedule;
+window.refreshRewards = loadRewards;
+window.refreshTraining = loadTraining;
+window.refreshUpdates = loadUpdates;
+window.syncNow = syncNow;

@@ -3,7 +3,10 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+require('dotenv').config(); // Load environment variables from .env
 const { URLSearchParams } = require('url');
+// Load environment variables
+try { require('dotenv').config(); } catch (e) {}
 const { Pool } = require('pg');
 
 process.on('uncaughtException', (err) => {
@@ -14,11 +17,14 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
+console.log('Starting Server v1.2 (Fixed NEON_API_KEY issue)...');
 const PORT = 8002;
 const TASKS_FILE = path.join(__dirname, 'team_tasks.json');
 const REWARDS_FILE = path.join(__dirname, 'team_rewards.json');
 const SCHEDULED_TASKS_FILE = path.join(__dirname, 'team_scheduled_tasks.json');
 const TRAINING_VIDEOS_FILE = path.join(__dirname, 'team_training_videos.json');
+const UPDATES_FILE = path.join(__dirname, 'team_updates.json');
+const NOTIFICATIONS_FILE = path.join(__dirname, 'team_notifications.json');
 
 const DATABASE_URL = process.env.DATABASE_URL || process.env.NEON_DB_URL;
 let pool = null;
@@ -412,10 +418,10 @@ async function processScheduledTasks() {
         let schedules = [];
         
         // 1. Fetch Schedules
-        if (NEON_API_KEY) {
-             const resp = await neonRequest('GET', '/team_scheduled_tasks');
-             if (resp.ok && Array.isArray(resp.data)) {
-                 schedules = resp.data;
+        if (pool) {
+             const resp = await dbQuery('SELECT * FROM team_scheduled_tasks');
+             if (resp.ok && Array.isArray(resp.rows)) {
+                 schedules = resp.rows;
              }
         } else {
              if (fs.existsSync(SCHEDULED_TASKS_FILE)) {
@@ -478,8 +484,12 @@ async function processScheduledTasks() {
                     };
 
                     // Save Task
-                    if (NEON_API_KEY) {
-                        await neonRequest('POST', '/team_tasks', newTask);
+                    if (pool) {
+                        const fields = Object.keys(newTask);
+                        const values = Object.values(newTask);
+                        const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+                        const sql = `INSERT INTO team_tasks (${fields.join(', ')}) VALUES (${placeholders})`;
+                        await dbQuery(sql, values);
                     } else {
                         let list = [];
                         if (fs.existsSync(TASKS_FILE)) {
@@ -502,8 +512,10 @@ async function processScheduledTasks() {
                 const updateData = { lastGenerated: todayStr };
                 if (sch.recurrence === 'one-time') updateData.status = 'completed';
 
-                if (NEON_API_KEY) {
-                    await neonRequest('PATCH', `/team_scheduled_tasks?id=eq.${sch.id}`, updateData);
+                if (pool) {
+                    const keys = Object.keys(updateData).map(k => `"${k}" = $${Object.keys(updateData).indexOf(k) + 2}`).join(', ');
+                    const vals = Object.values(updateData);
+                    await dbQuery(`UPDATE team_scheduled_tasks SET ${keys} WHERE id = $1`, [sch.id, ...vals]);
                 } else {
                     let list = JSON.parse(fs.readFileSync(SCHEDULED_TASKS_FILE, 'utf8') || '[]');
                     const idx = list.findIndex(t => t.id === sch.id);
@@ -584,9 +596,9 @@ http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && u.pathname === '/api/team_tasks') {
         try {
-            if (NEON_API_KEY) {
-                const resp = await neonRequest('GET', '/team_tasks' + (u.search || ''));
-                return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, tasks: Array.isArray(resp.data) ? resp.data : [] });
+            if (pool) {
+                const resDb = await dbQuery('SELECT * FROM team_tasks ORDER BY "createdAt" DESC');
+                return sendJson(res, resDb.ok ? 200 : 500, { ok: resDb.ok, tasks: resDb.rows || [] });
             }
             let list = [];
             if (fs.existsSync(TASKS_FILE)) {
@@ -600,12 +612,13 @@ http.createServer(async (req, res) => {
         }
     }
 
+
     // --- Scheduled Tasks Endpoints ---
     if (req.method === 'GET' && u.pathname === '/api/scheduled_tasks') {
         try {
-            if (NEON_API_KEY) {
-                const resp = await neonRequest('GET', '/team_scheduled_tasks' + (u.search || ''));
-                return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, tasks: Array.isArray(resp.data) ? resp.data : [] });
+            if (pool) {
+                const resp = await dbQuery('SELECT * FROM team_scheduled_tasks ORDER BY "createdAt" DESC');
+                return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, tasks: resp.rows || [] });
             }
             let list = [];
             if (fs.existsSync(SCHEDULED_TASKS_FILE)) {
@@ -622,14 +635,23 @@ http.createServer(async (req, res) => {
     if (req.method === 'POST' && u.pathname === '/api/scheduled_tasks') {
         try {
             const body = await readJson(req);
-            if (NEON_API_KEY) {
+            if (pool) {
                 if (!body.id) throw new Error('Task ID required');
-                const check = await neonRequest('GET', `/team_scheduled_tasks?id=eq.${body.id}`);
-                const exists = check.ok && Array.isArray(check.data) && check.data.length > 0;
-                const method = exists ? 'PATCH' : 'POST';
-                const endpoint = exists ? `/team_scheduled_tasks?id=eq.${body.id}` : '/team_scheduled_tasks';
-                const save = await neonRequest(method, endpoint, body);
-                return sendJson(res, save.ok ? 200 : 500, { ok: save.ok, task: Array.isArray(save.data) ? save.data[0] : save.data });
+                const check = await dbQuery('SELECT id FROM team_scheduled_tasks WHERE id = $1', [body.id]);
+                const exists = check.ok && check.rows.length > 0;
+                
+                if (exists) {
+                     const keys = Object.keys(body).map(k => `"${k}" = $${Object.keys(body).indexOf(k) + 2}`).join(', ');
+                     const vals = Object.values(body);
+                     const update = await dbQuery(`UPDATE team_scheduled_tasks SET ${keys} WHERE id = $1 RETURNING *`, [body.id, ...vals]);
+                     return sendJson(res, update.ok ? 200 : 500, { ok: update.ok, task: update.rows ? update.rows[0] : null });
+                } else {
+                     const keys = Object.keys(body).map(k => `"${k}"`).join(', ');
+                     const vals = Object.values(body);
+                     const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
+                     const insert = await dbQuery(`INSERT INTO team_scheduled_tasks (${keys}) VALUES (${placeholders}) RETURNING *`, vals);
+                     return sendJson(res, insert.ok ? 200 : 500, { ok: insert.ok, task: insert.rows ? insert.rows[0] : null });
+                }
             }
 
             const next = body && typeof body === 'object' ? body : {};
@@ -670,9 +692,8 @@ http.createServer(async (req, res) => {
             const id = u.searchParams.get('id');
             if (!id) return sendJson(res, 400, { ok: false, error: 'Missing query: provide id' });
 
-            if (NEON_API_KEY) {
-                const endpoint = `/team_scheduled_tasks?id=eq.${encodeURIComponent(id)}`;
-                const del = await neonRequest('DELETE', endpoint);
+            if (pool) {
+                const del = await dbQuery('DELETE FROM team_scheduled_tasks WHERE id = $1', [id]);
                 return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
             }
 
@@ -694,14 +715,23 @@ http.createServer(async (req, res) => {
     if (req.method === 'POST' && u.pathname === '/api/team_tasks') {
         try {
             const body = await readJson(req);
-            if (NEON_API_KEY) {
+            if (pool) {
                 if (!body.id) throw new Error('Task ID required');
-                const check = await neonRequest('GET', `/team_tasks?id=eq.${body.id}`);
-                const exists = check.ok && Array.isArray(check.data) && check.data.length > 0;
-                const method = exists ? 'PATCH' : 'POST';
-                const endpoint = exists ? `/team_tasks?id=eq.${body.id}` : '/team_tasks';
-                const save = await neonRequest(method, endpoint, body);
-                return sendJson(res, save.ok ? 200 : 500, { ok: save.ok, task: Array.isArray(save.data) ? save.data[0] : save.data });
+                const check = await dbQuery('SELECT id FROM team_tasks WHERE id = $1', [body.id]);
+                const exists = check.ok && check.rows.length > 0;
+                
+                if (exists) {
+                    const keys = Object.keys(body).map(k => `"${k}" = $${Object.keys(body).indexOf(k) + 2}`).join(', ');
+                    const vals = Object.values(body);
+                    const update = await dbQuery(`UPDATE team_tasks SET ${keys} WHERE id = $1 RETURNING *`, [body.id, ...vals]);
+                    return sendJson(res, update.ok ? 200 : 500, { ok: update.ok, task: update.rows ? update.rows[0] : null });
+                } else {
+                    const keys = Object.keys(body).map(k => `"${k}"`).join(', ');
+                    const vals = Object.values(body);
+                    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
+                    const insert = await dbQuery(`INSERT INTO team_tasks (${keys}) VALUES (${placeholders}) RETURNING *`, vals);
+                    return sendJson(res, insert.ok ? 200 : 500, { ok: insert.ok, task: insert.rows ? insert.rows[0] : null });
+                }
             }
 
             const next = body && typeof body === 'object' ? body : {};
@@ -737,9 +767,8 @@ http.createServer(async (req, res) => {
                 return sendJson(res, 400, { ok: false, error: 'Missing query: provide id' });
             }
 
-            if (NEON_API_KEY) {
-                const endpoint = `/team_tasks?id=eq.${encodeURIComponent(id)}`;
-                const del = await neonRequest('DELETE', endpoint);
+            if (pool) {
+                const del = await dbQuery('DELETE FROM team_tasks WHERE id = $1', [id]);
                 return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
             }
 
@@ -762,9 +791,8 @@ http.createServer(async (req, res) => {
             const body = await readJson(req);
             const id = String(body && body.id ? body.id : '').trim();
             if (!id) return sendJson(res, 400, { ok: false, error: 'Missing id' });
-            if (NEON_API_KEY) {
-                const endpoint = `/team_tasks?id=eq.${encodeURIComponent(id)}`;
-                const del = await neonRequest('DELETE', endpoint);
+            if (pool) {
+                const del = await dbQuery('DELETE FROM team_tasks WHERE id = $1', [id]);
                 return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
             }
             let list = [];
@@ -783,9 +811,9 @@ http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && u.pathname === '/api/team_rewards') {
         try {
-            if (NEON_API_KEY) {
-                const resp = await neonRequest('GET', '/team_rewards' + (u.search || ''));
-                return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, rewards: Array.isArray(resp.data) ? resp.data : [] });
+            if (pool) {
+                const resDb = await dbQuery('SELECT * FROM team_rewards');
+                return sendJson(res, resDb.ok ? 200 : 500, { ok: resDb.ok, rewards: resDb.rows || [] });
             }
             let list = [];
             if (fs.existsSync(REWARDS_FILE)) {
@@ -802,14 +830,23 @@ http.createServer(async (req, res) => {
     if (req.method === 'POST' && u.pathname === '/api/team_rewards') {
         try {
             const body = await readJson(req);
-            if (NEON_API_KEY) {
+            if (pool) {
                 if (!body.id) throw new Error('Reward ID required');
-                const check = await neonRequest('GET', `/team_rewards?id=eq.${body.id}`);
-                const exists = check.ok && Array.isArray(check.data) && check.data.length > 0;
-                const method = exists ? 'PATCH' : 'POST';
-                const endpoint = exists ? `/team_rewards?id=eq.${body.id}` : '/team_rewards';
-                const save = await neonRequest(method, endpoint, body);
-                return sendJson(res, save.ok ? 200 : 500, { ok: save.ok, reward: Array.isArray(save.data) ? save.data[0] : save.data });
+                const check = await dbQuery('SELECT id FROM team_rewards WHERE id = $1', [body.id]);
+                const exists = check.ok && check.rows.length > 0;
+                
+                if (exists) {
+                    const keys = Object.keys(body).map(k => `"${k}" = $${Object.keys(body).indexOf(k) + 2}`).join(', ');
+                    const vals = Object.values(body);
+                    const update = await dbQuery(`UPDATE team_rewards SET ${keys} WHERE id = $1 RETURNING *`, [body.id, ...vals]);
+                    return sendJson(res, update.ok ? 200 : 500, { ok: update.ok, reward: update.rows ? update.rows[0] : null });
+                } else {
+                    const keys = Object.keys(body).map(k => `"${k}"`).join(', ');
+                    const vals = Object.values(body);
+                    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
+                    const insert = await dbQuery(`INSERT INTO team_rewards (${keys}) VALUES (${placeholders}) RETURNING *`, vals);
+                    return sendJson(res, insert.ok ? 200 : 500, { ok: insert.ok, reward: insert.rows ? insert.rows[0] : null });
+                }
             }
 
             const next = body && typeof body === 'object' ? body : {};
@@ -842,17 +879,16 @@ http.createServer(async (req, res) => {
         try {
             const all = u.searchParams.get('all');
             const taskId = u.searchParams.get('taskId');
-            if (NEON_API_KEY) {
-                let endpoint = '';
+            if (pool) {
                 if (all === 'true') {
-                    endpoint = '/team_rewards?id=not.is.null';
+                    const del = await dbQuery('DELETE FROM team_rewards');
+                    return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
                 } else if (taskId) {
-                    endpoint = `/team_rewards?taskId=eq.${encodeURIComponent(taskId)}`;
+                    const del = await dbQuery('DELETE FROM team_rewards WHERE "taskId" = $1', [taskId]);
+                    return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
                 } else {
                     return sendJson(res, 400, { ok: false, error: 'Missing query: provide all=true or taskId' });
                 }
-                const del = await neonRequest('DELETE', endpoint);
-                return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
             }
             let list = [];
             if (fs.existsSync(REWARDS_FILE)) {
@@ -876,9 +912,9 @@ http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && u.pathname === '/api/team_training_videos') {
         try {
-            if (NEON_API_KEY) {
-                const resp = await neonRequest('GET', '/team_training_videos' + (u.search || ''));
-                return sendJson(res, resp.ok ? 200 : 500, { ok: resp.ok, videos: Array.isArray(resp.data) ? resp.data : [] });
+            if (pool) {
+                const resDb = await dbQuery('SELECT * FROM team_training_videos');
+                return sendJson(res, resDb.ok ? 200 : 500, { ok: resDb.ok, videos: resDb.rows || [] });
             }
             let list = [];
             if (fs.existsSync(TRAINING_VIDEOS_FILE)) {
@@ -895,14 +931,23 @@ http.createServer(async (req, res) => {
     if (req.method === 'POST' && u.pathname === '/api/team_training_videos') {
         try {
             const body = await readJson(req);
-            if (NEON_API_KEY) {
+            if (pool) {
                 if (!body.id) throw new Error('Video ID required');
-                const check = await neonRequest('GET', `/team_training_videos?id=eq.${body.id}`);
-                const exists = check.ok && Array.isArray(check.data) && check.data.length > 0;
-                const method = exists ? 'PATCH' : 'POST';
-                const endpoint = exists ? `/team_training_videos?id=eq.${body.id}` : '/team_training_videos';
-                const save = await neonRequest(method, endpoint, body);
-                return sendJson(res, save.ok ? 200 : 500, { ok: save.ok, video: Array.isArray(save.data) ? save.data[0] : save.data });
+                const check = await dbQuery('SELECT id FROM team_training_videos WHERE id = $1', [body.id]);
+                const exists = check.ok && check.rows.length > 0;
+                
+                if (exists) {
+                    const keys = Object.keys(body).map(k => `"${k}" = $${Object.keys(body).indexOf(k) + 2}`).join(', ');
+                    const vals = Object.values(body);
+                    const update = await dbQuery(`UPDATE team_training_videos SET ${keys} WHERE id = $1 RETURNING *`, [body.id, ...vals]);
+                    return sendJson(res, update.ok ? 200 : 500, { ok: update.ok, video: update.rows ? update.rows[0] : null });
+                } else {
+                    const keys = Object.keys(body).map(k => `"${k}"`).join(', ');
+                    const vals = Object.values(body);
+                    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
+                    const insert = await dbQuery(`INSERT INTO team_training_videos (${keys}) VALUES (${placeholders}) RETURNING *`, vals);
+                    return sendJson(res, insert.ok ? 200 : 500, { ok: insert.ok, video: insert.rows ? insert.rows[0] : null });
+                }
             }
 
             const next = body && typeof body === 'object' ? body : {};
@@ -936,9 +981,8 @@ http.createServer(async (req, res) => {
             const id = u.searchParams.get('id');
             if (!id) return sendJson(res, 400, { ok: false, error: 'Missing query: provide id' });
 
-            if (NEON_API_KEY) {
-                const endpoint = `/team_training_videos?id=eq.${encodeURIComponent(id)}`;
-                const del = await neonRequest('DELETE', endpoint);
+            if (pool) {
+                const del = await dbQuery('DELETE FROM team_training_videos WHERE id = $1', [id]);
                 return sendJson(res, del.ok ? 200 : 500, { ok: del.ok });
             }
 
@@ -954,6 +998,145 @@ http.createServer(async (req, res) => {
         } catch (e) {
             return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
         }
+    }
+
+    // --- Team Updates (Events) ---
+    if (req.method === 'GET' && u.pathname === '/api/team_updates') {
+        try {
+            if (pool) {
+                const resDb = await dbQuery('SELECT * FROM team_updates ORDER BY "date" ASC');
+                return sendJson(res, resDb.ok ? 200 : 500, { ok: resDb.ok, updates: resDb.rows || [] });
+            }
+            let list = [];
+            if (fs.existsSync(UPDATES_FILE)) {
+                const raw = fs.readFileSync(UPDATES_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            return sendJson(res, 200, { ok: true, updates: list });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (req.method === 'POST' && u.pathname === '/api/team_updates') {
+        try {
+            const body = await readJson(req);
+            if (pool) {
+                if (!body.id) throw new Error('Update ID required');
+                const check = await dbQuery('SELECT id FROM team_updates WHERE id = $1', [body.id]);
+                const exists = check.ok && check.rows.length > 0;
+                
+                if (exists) {
+                    const keys = Object.keys(body).map(k => `"${k}" = $${Object.keys(body).indexOf(k) + 2}`).join(', ');
+                    const vals = Object.values(body);
+                    const update = await dbQuery(`UPDATE team_updates SET ${keys} WHERE id = $1 RETURNING *`, [body.id, ...vals]);
+                    return sendJson(res, update.ok ? 200 : 500, { ok: update.ok, update: update.rows ? update.rows[0] : null });
+                } else {
+                    const keys = Object.keys(body).map(k => `"${k}"`).join(', ');
+                    const vals = Object.values(body);
+                    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
+                    const insert = await dbQuery(`INSERT INTO team_updates (${keys}) VALUES (${placeholders}) RETURNING *`, vals);
+                    return sendJson(res, insert.ok ? 200 : 500, { ok: insert.ok, update: insert.rows ? insert.rows[0] : null });
+                }
+            }
+
+            const next = body && typeof body === 'object' ? body : {};
+            let list = [];
+            if (fs.existsSync(UPDATES_FILE)) {
+                const raw = fs.readFileSync(UPDATES_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            const id = String(next.id || '').trim() || ('update_' + Date.now());
+            const nowIso = new Date().toISOString();
+            const idx = list.findIndex(u => String(u && u.id) === id);
+            const payload = {
+                ...list[idx] || {},
+                ...next,
+                id,
+                updatedAt: nowIso,
+                createdAt: list[idx] && list[idx].createdAt ? list[idx].createdAt : (next.createdAt || nowIso)
+            };
+            if (idx === -1) list.push(payload);
+            else list[idx] = payload;
+            fs.writeFileSync(UPDATES_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true, update: payload });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    // --- Team Notifications ---
+    if (req.method === 'GET' && u.pathname === '/api/team_notifications') {
+        try {
+            if (pool) {
+                const resDb = await dbQuery('SELECT * FROM team_notifications ORDER BY "createdAt" DESC');
+                return sendJson(res, resDb.ok ? 200 : 500, { ok: resDb.ok, notifications: resDb.rows || [] });
+            }
+            let list = [];
+            if (fs.existsSync(NOTIFICATIONS_FILE)) {
+                const raw = fs.readFileSync(NOTIFICATIONS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            return sendJson(res, 200, { ok: true, notifications: list });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (req.method === 'POST' && u.pathname === '/api/team_notifications') {
+        try {
+            const body = await readJson(req);
+            if (pool) {
+                if (!body.id) throw new Error('Notification ID required');
+                const check = await dbQuery('SELECT id FROM team_notifications WHERE id = $1', [body.id]);
+                const exists = check.ok && check.rows.length > 0;
+                
+                if (exists) {
+                    const keys = Object.keys(body).map(k => `"${k}" = $${Object.keys(body).indexOf(k) + 2}`).join(', ');
+                    const vals = Object.values(body);
+                    const update = await dbQuery(`UPDATE team_notifications SET ${keys} WHERE id = $1 RETURNING *`, [body.id, ...vals]);
+                    return sendJson(res, update.ok ? 200 : 500, { ok: update.ok, notification: update.rows ? update.rows[0] : null });
+                } else {
+                    const keys = Object.keys(body).map(k => `"${k}"`).join(', ');
+                    const vals = Object.values(body);
+                    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
+                    const insert = await dbQuery(`INSERT INTO team_notifications (${keys}) VALUES (${placeholders}) RETURNING *`, vals);
+                    return sendJson(res, insert.ok ? 200 : 500, { ok: insert.ok, notification: insert.rows ? insert.rows[0] : null });
+                }
+            }
+
+            const next = body && typeof body === 'object' ? body : {};
+            let list = [];
+            if (fs.existsSync(NOTIFICATIONS_FILE)) {
+                const raw = fs.readFileSync(NOTIFICATIONS_FILE, 'utf8');
+                const parsed = JSON.parse(raw || '[]');
+                list = Array.isArray(parsed) ? parsed : [];
+            }
+            const id = String(next.id || '').trim() || ('notif_' + Date.now());
+            const nowIso = new Date().toISOString();
+            const idx = list.findIndex(n => String(n && n.id) === id);
+            const payload = {
+                ...list[idx] || {},
+                ...next,
+                id,
+                updatedAt: nowIso,
+                createdAt: list[idx] && list[idx].createdAt ? list[idx].createdAt : (next.createdAt || nowIso)
+            };
+            if (idx === -1) list.push(payload);
+            else list[idx] = payload;
+            fs.writeFileSync(NOTIFICATIONS_FILE, JSON.stringify(list));
+            return sendJson(res, 200, { ok: true, notification: payload });
+        } catch (e) {
+            return sendJson(res, 500, { ok: false, error: String(e && e.message ? e.message : e) });
+        }
+    }
+
+    if (u.pathname.startsWith('/api/')) {
+        console.log(`API 404 Not Found: ${req.method} ${u.pathname}`);
+        return sendJson(res, 404, { ok: false, error: 'Not Found' });
     }
 
     // Static File Serving
@@ -987,22 +1170,31 @@ http.createServer(async (req, res) => {
         }
 
         const fileSize = stats.size;
-        
-        // Simple stream for now to debug ERR_ABORTED
-        const head = {
-            'Content-Length': fileSize,
-            'Content-Type': contentType,
-        };
-        res.writeHead(200, head);
-        const file = fs.createReadStream(filePath);
-        file.on('error', (err) => {
-            console.error('Stream error:', err);
-            if (!res.headersSent) {
-                res.writeHead(500);
-                res.end('Stream Error');
-            }
-        });
-        file.pipe(res);
+        const range = req.headers.range;
+
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+            const file = fs.createReadStream(filePath, { start, end });
+            const head = {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': contentType,
+            };
+            res.writeHead(206, head);
+            file.pipe(res);
+        } else {
+            const head = {
+                'Content-Length': fileSize,
+                'Content-Type': contentType,
+            };
+            res.writeHead(200, head);
+            const file = fs.createReadStream(filePath);
+            file.pipe(res);
+        }
     });
 
 }).listen(PORT, '0.0.0.0', () => {

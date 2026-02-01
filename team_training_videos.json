@@ -1,0 +1,18 @@
+[
+    {
+        "id": "vid001",
+        "title": "Welcome to Apex Circle",
+        "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        "description": "Introduction to our team values and mission.",
+        "memberId": "all",
+        "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+        "id": "vid002",
+        "title": "Event Coordination Basics",
+        "url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        "description": "How to manage guests and logistics efficiently.",
+        "memberId": "all",
+        "createdAt": "2026-01-05T00:00:00.000Z"
+    }
+]

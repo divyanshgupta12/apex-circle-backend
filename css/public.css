@@ -639,7 +639,7 @@
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
     .navbar {
         padding: var(--spacing-sm) var(--spacing-md);
     }
@@ -705,7 +705,9 @@
     .nav-menu li a::after {
         display: none; /* Remove underline effect on mobile */
     }
-    
+}
+
+@media (max-width: 768px) {
     /* Hero Adjustments */
     .hero {
         min-height: auto;

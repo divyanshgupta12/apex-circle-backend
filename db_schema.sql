@@ -7,13 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS team_tasks (
     id TEXT PRIMARY KEY,
     title TEXT,
-    "memberId" TEXT,  -- Quoted to preserve camelCase if needed, but standard SQL is snake_case. The JSON uses camelCase.
-                      -- Neon/Postgres is case-insensitive unless quoted.
-                      -- The API logic usually maps JSON fields to columns. 
-                      -- Let's use snake_case for columns and assume the API handles mapping, 
-                      -- OR stick to quoted identifiers to match JSON exactly for simplicity with generic REST APIs.
-                      -- The existing Netlify functions seem to use `memberId` in query strings (PostgREST style).
-                      -- PostgREST usually expects columns to match.
+    "memberId" TEXT,
     "eventName" TEXT,
     description TEXT,
     "dueDate" TEXT,
@@ -55,4 +49,16 @@ CREATE TABLE IF NOT EXISTS team_rewards (
     reason TEXT,
     "createdAt" TEXT,
     status TEXT
+);
+
+-- Table: team_training_videos
+CREATE TABLE IF NOT EXISTS team_training_videos (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    url TEXT,
+    description TEXT,
+    "memberId" TEXT,
+    "createdAt" TEXT,
+    "updatedAt" TEXT,
+    category TEXT
 );

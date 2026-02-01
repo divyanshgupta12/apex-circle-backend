@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================
    The Apex Circle - Team Management (Admin)
    ============================================ */
 
@@ -1235,11 +1235,24 @@ async function updateNeonStatus(el) {
         if (!resp.ok) {
             const errText = await resp.text().catch(() => '');
             console.error('Neon Check Error:', resp.status, errText);
-            const snippet = String(errText || '').replace(/\s+/g, ' ').trim().slice(0, 120);
-            if (snippet) {
-                el.textContent = `Neon: Error ${resp.status} - ${snippet}`;
+            
+            let displayError = '';
+            try {
+                const json = JSON.parse(errText);
+                if (json && json.error) displayError = json.error;
+            } catch (e) {
+                displayError = String(errText || '').replace(/\s+/g, ' ').trim();
+            }
+
+            if (displayError.includes('NEON_API_KEY is not defined')) {
+                 el.textContent = 'Neon: Server Outdated (Please Deploy Latest Code)';
             } else {
-                el.textContent = `Neon: Error (${resp.status})`;
+                 const snippet = displayError.slice(0, 120);
+                 if (snippet) {
+                     el.textContent = `Neon: Error ${resp.status} - ${snippet}`;
+                 } else {
+                     el.textContent = `Neon: Error (${resp.status})`;
+                 }
             }
             el.style.color = '#B00020';
             return;
