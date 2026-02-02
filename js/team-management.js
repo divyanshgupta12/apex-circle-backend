@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/* ============================================
    The Apex Circle - Team Management (Admin)
    ============================================ */
 
@@ -1443,7 +1443,7 @@ function approveTaskReward(taskId) {
         if (!existing) {
             const reward = {
                 id: 'reward_' + Date.now(),
-                title: 'Task Reward: ' + (task.title || ''),
+                reason: 'Task Reward: ' + (task.title || ''),
                 memberId: task.memberId,
                 eventName: task.eventName,
                 amount: points,
@@ -1591,9 +1591,10 @@ function renderRewardsTable(rewards) {
         
         return sorted.map(reward => {
             const member = teamMembers.find(m => m.id === reward.memberId);
+            const title = reward.reason || reward.title || 'Reward';
             return `
                 <tr>
-                    <td><strong>${reward.title}</strong></td>
+                    <td><strong>${title}</strong></td>
                     <td>${member ? member.name : 'Unknown'}</td>
                     <td>${reward.eventName}</td>
                     <td><strong style="color: #FFD700;">₹${reward.amount || 0}</strong></td>
@@ -1933,7 +1934,7 @@ function setupRewardForm() {
         const description = document.getElementById('rewardDescription').value || '';
 
         const next = {
-            title,
+            reason: title,
             memberId,
             eventName,
             amount,
@@ -2245,7 +2246,7 @@ function editReward(rewardId) {
     const form = document.getElementById('rewardForm');
     form.dataset.editId = rewardId;
 
-    document.getElementById('rewardTitle').value = reward.title || '';
+    document.getElementById('rewardTitle').value = reward.reason || reward.title || '';
     document.getElementById('rewardMember').value = reward.memberId || '';
     document.getElementById('rewardEvent').value = reward.eventName || '';
     document.getElementById('rewardAmount').value = typeof reward.amount === 'number' ? reward.amount : (reward.amount || 0);

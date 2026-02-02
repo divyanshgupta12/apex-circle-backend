@@ -872,7 +872,7 @@ function renderRewards(rewards) {
     const renderItem = (r) => `
         <div class="task-card" style="margin-bottom: var(--spacing-sm); display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <div style="font-weight: 600;">${r.title || r.reason || 'Reward'}</div>
+                <div style="font-weight: 600;">${r.reason || r.title || 'Reward'}</div>
                 <div style="font-size: 0.85rem; color: gray;">${formatDate(r.date || r.createdAt)}</div>
                 ${r.taskId ? `<div style="font-size: 0.75rem; color: var(--primary-color);">Task ID: ${r.taskId}</div>` : ''}
             </div>
