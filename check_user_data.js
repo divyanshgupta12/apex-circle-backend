@@ -7,9 +7,10 @@ const pool = new Pool({
 });
 
 async function checkUserData(memberId) {
-    console.log(`Checking data for member: ${memberId}`);
+    console.error(`DEBUG: Start checking data for member: ${memberId}`);
     try {
         // Check Tasks
+        console.error('DEBUG: Querying tasks...');
         const tasksRes = await pool.query('SELECT * FROM team_tasks WHERE "memberId" = $1 OR "memberId" = \'all\'', [memberId]);
         console.log(`Tasks found (${tasksRes.rowCount}):`);
         if (tasksRes.rowCount > 0) {
