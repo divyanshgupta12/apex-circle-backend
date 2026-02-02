@@ -39,4 +39,4 @@ async function checkUserData(memberId) {
     }
 }
 
-checkUserData('tm004');
+checkUserData('tm001');
